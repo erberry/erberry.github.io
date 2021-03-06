@@ -1,4 +1,4 @@
-baseURL = "https://erberry.github.io"
+baseURL = "https://erberry.github.io/"
 languageCode = "zh-CN"
 title = "erberry的博客"
 theme = "maupassant"
