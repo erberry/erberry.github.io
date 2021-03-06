@@ -50,11 +50,11 @@ summaryLength = 140
   ##img = "https://img.alicdn.com/tfs/TB1_rYHo7P2gK0jSZPxXXacQpXa-690-388.jpg"
 
 ## 配置 utteranc评论,教程参考 https://utteranc.es/
-##[params.utteranc]
-  ##enable = true
-  ##repo = "your github repo" ##换成自己得
-  ##issueTerm = "pathname"
-  ##theme = "github-light"
+[params.utteranc]
+  enable = true
+  repo = "https://github.com/erberry/erberry.github.io/" ##换成自己得
+  issueTerm = "pathname"
+  theme = "github-light"
 
 ## 开启版权声明，协议名字和链接都可以换
 [params.cc]
