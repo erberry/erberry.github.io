@@ -2,7 +2,7 @@ baseURL = "https://erberry.github.io/"
 languageCode = "zh-CN"
 title = "erberry的博客"
 theme = "maupassant"
-googleAnalytics = ""  # UA-XXXXXXXX-X
+googleAnalytics = "G-3Y6MVV32VP"  # UA-XXXXXXXX-X
 
 ## 保持分类的原始名字（false会做转小写处理）
 preserveTaxonomyNames = true
