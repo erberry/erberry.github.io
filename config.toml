@@ -52,7 +52,7 @@ summaryLength = 140
 ## 配置 utteranc评论,教程参考 https://utteranc.es/
 [params.utteranc]
   enable = true
-  repo = "https://github.com/erberry/erberry.github.io/" ##换成自己得
+  repo = "erberry/erberry.github.io" ##换成自己得
   issueTerm = "pathname"
   theme = "github-light"
 
