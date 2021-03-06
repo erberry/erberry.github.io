@@ -5,7 +5,8 @@
     <link>https://erberry.github.io/</link>
     <description>Recent content on erberry的博客</description>
     <generator>Hugo -- gohugo.io</generator>
-    <language>zh-CN</language><atom:link href="https://erberry.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <language>zh-CN</language>
+    <lastBuildDate>Sat, 18 Nov 2017 21:27:02 +0800</lastBuildDate><atom:link href="https://erberry.github.io/index.xml" rel="self" type="application/rss+xml" />
     <item>
       <title>关于我</title>
       <link>https://erberry.github.io/about/</link>
@@ -13,6 +14,15 @@
       
       <guid>https://erberry.github.io/about/</guid>
       <description>后端开发老鸟一枚</description>
+    </item>
+    
+    <item>
+      <title>Thread Local Storage</title>
+      <link>https://erberry.github.io/post/2017-11-18-thread-local-storage/</link>
+      <pubDate>Sat, 18 Nov 2017 21:27:02 +0800</pubDate>
+      
+      <guid>https://erberry.github.io/post/2017-11-18-thread-local-storage/</guid>
+      <description>TLS(Thread Local Storage)是什么 TLS是一种在多线程时使用的技术，它可以使你的全局变量、静态变量以及局部静态、静态成员变量成为线程独立的变量，即每个线程的TLS变量之间互不影响。例如linux下的全局变量 errno，windows下的GetLastError ，线程A在设置了一个错误信息</description>
     </item>
     
     <item>
