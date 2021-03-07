@@ -6,7 +6,16 @@
     <description>Recent content on erberry的博客</description>
     <generator>Hugo -- gohugo.io</generator>
     <language>zh-CN</language>
-    <lastBuildDate>Sat, 18 Nov 2017 21:27:02 +0800</lastBuildDate><atom:link href="https://erberry.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <lastBuildDate>Sun, 07 Mar 2021 10:38:14 +0800</lastBuildDate><atom:link href="https://erberry.github.io/index.xml" rel="self" type="application/rss+xml" />
+    <item>
+      <title>Deferred Page Alloc</title>
+      <link>https://erberry.github.io/post/2021-03-07-deferred-page-alloc/</link>
+      <pubDate>Sun, 07 Mar 2021 10:38:14 +0800</pubDate>
+      
+      <guid>https://erberry.github.io/post/2021-03-07-deferred-page-alloc/</guid>
+      <description>你要的内存真的是你的吗 在linux上c或者c++常会用到堆内存分配函数malloc，malloc接受一个需要分配空间大小的参数，然后返回分配好的内存空间地址，通常会判断它的返回值是否为NULL，如果为NULL代表内存分配失败。但是有些情况下即使返回了非NULL，当向新的内存地址中</description>
+    </item>
+    
     <item>
       <title>关于我</title>
       <link>https://erberry.github.io/about/</link>
