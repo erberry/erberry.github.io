@@ -1,0 +1,454 @@
+<!doctype html><html lang=en>
+<head>
+<meta charset=utf-8>
+<meta http-equiv=x-ua-compatible content="IE=edge,chrome=1">
+<title>sync.Pool源码解析 - 刘玮的博客</title>
+<meta name=renderer content="webkit">
+<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta http-equiv=cache-control content="no-transform">
+<meta http-equiv=cache-control content="no-siteapp">
+<meta name=theme-color content="#f8f5ec">
+<meta name=msapplication-navbutton-color content="#f8f5ec">
+<meta name=apple-mobile-web-app-capable content="yes">
+<meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec">
+<meta name=author content="刘玮"><meta name=description content="sync.Pool源码解析"><meta name=keywords content="Go,sync.Pool">
+<meta name=generator content="Hugo 0.92.1 with theme even">
+<link rel=canonical href=https://erberry.github.io/post/go-sync-pool/>
+<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
+<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
+<link rel=manifest href=/manifest.json>
+<link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5>
+<script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
+<link href=/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css rel=stylesheet>
+<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous>
+<meta property="og:title" content="sync.Pool源码解析">
+<meta property="og:description" content="sync.Pool源码解析">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://erberry.github.io/post/go-sync-pool/"><meta property="article:section" content="post">
+<meta property="article:published_time" content="2022-02-12T20:06:05+08:00">
+<meta property="article:modified_time" content="2022-02-12T20:06:05+08:00">
+<meta itemprop=name content="sync.Pool源码解析">
+<meta itemprop=description content="sync.Pool源码解析"><meta itemprop=datePublished content="2022-02-12T20:06:05+08:00">
+<meta itemprop=dateModified content="2022-02-12T20:06:05+08:00">
+<meta itemprop=wordCount content="1561">
+<meta itemprop=keywords content="Go,源码解析,"><meta name=twitter:card content="summary">
+<meta name=twitter:title content="sync.Pool源码解析">
+<meta name=twitter:description content="sync.Pool源码解析"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
+<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]-->
+</head>
+<body>
+<div id=mobile-navbar class=mobile-navbar>
+<div class=mobile-header-logo>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<div class=mobile-navbar-icon>
+<span></span>
+<span></span>
+<span></span>
+</div>
+</div>
+<nav id=mobile-menu class="mobile-menu slideout-menu">
+<ul class=mobile-menu-list>
+<a href=/>
+<li class=mobile-menu-item>主页</li>
+</a><a href=/post/>
+<li class=mobile-menu-item>归档</li>
+</a><a href=/tags/>
+<li class=mobile-menu-item>标签</li>
+</a><a href=/categories/>
+<li class=mobile-menu-item>分类</li>
+</a><a href=/about/>
+<li class=mobile-menu-item>关于</li>
+</a>
+</ul>
+</nav>
+<div class=container id=mobile-panel>
+<header id=header class=header>
+<div class=logo-wrapper>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<nav class=site-navbar>
+<ul id=menu class=menu>
+<li class=menu-item>
+<a class=menu-item-link href=/>主页</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/post/>归档</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/tags/>标签</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/categories/>分类</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/about/>关于</a>
+</li>
+</ul>
+</nav>
+</header>
+<main id=main class=main>
+<div class=content-wrapper>
+<div id=content class=content>
+<article class=post>
+<header class=post-header>
+<h1 class=post-title>sync.Pool源码解析</h1>
+<div class=post-meta>
+<span class=post-time> 2022-02-12 </span>
+<div class=post-category>
+<a href=/categories/go/> Go </a>
+</div>
+<span id=busuanzi_container_page_pv class=more-meta> <span id=busuanzi_value_page_pv><img src=/img/spinner.svg alt=spinner.svg></span> times read </span>
+</div>
+</header>
+<div class=post-toc id=post-toc>
+<h2 class=post-toc-title>Contents</h2>
+<div class="post-toc-content always-active">
+<nav id=TableOfContents>
+<ul>
+<li>
+<ul>
+<li><a href=#简介>简介</a></li>
+<li><a href=#数据结构>数据结构</a>
+<ul>
+<li><a href=#首先我们看一下pool的数据结构>首先我们看一下Pool的数据结构：</a></li>
+<li><a href=#poollocal>poolLocal</a></li>
+<li><a href=#poolchain>poolChain</a></li>
+<li><a href=#victim>victim</a></li>
+</ul>
+</li>
+<li><a href=#总结>总结</a></li>
+</ul>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+<div class=post-content>
+<h2 id=简介>简介</h2>
+<p>sync.Pool是go官方提供的多线程安全的对象缓存池。目的是达到内存复用，减少内存分配及gc带来的消耗。</p>
+<p>官方fmt包就使用了sync.Pool，代码如下：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func Sprintf(format string, a ...interface{}) string {
+	p := newPrinter()
+	p.doPrintf(format, a)
+	s := string(p.buf)
+	p.free()
+	return s
+}
+
+var ppFree = sync.Pool{
+	New: func() interface{} { return new(pp) },
+}
+
+// newPrinter allocates a new pp struct or grabs a cached one.
+func newPrinter() *pp {
+	p := ppFree.Get().(*pp)
+	p.panicking = false
+	p.erroring = false
+	p.wrapErrs = false
+	p.fmt.init(&amp;p.buf)
+	return p
+}
+
+// free saves used pp structs in ppFree; avoids an allocation per invocation.
+func (p *pp) free() {
+	if cap(p.buf) &gt; 64&lt;&lt;10 {
+		return
+	}
+
+	p.buf = p.buf[:0]
+	p.arg = nil
+	p.value = reflect.Value{}
+	p.wrappedErr = nil
+	ppFree.Put(p)
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>ppFree缓存了使用过的pp对象，Get方法取出一个缓存的对象，Put归还一个对象。</p>
+<p>下面我们来看一下源码，看看go官方是如何实现一个高性能的缓存池的。</p>
+<h2 id=数据结构>数据结构</h2>
+<h3 id=首先我们看一下pool的数据结构>首先我们看一下Pool的数据结构：</h3>
+<p><img src=/5.png alt=5></p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type Pool struct {
+	noCopy noCopy
+
+	local     unsafe.Pointer // local fixed-size per-P pool, actual type is [P]poolLocal
+	localSize uintptr        // size of the local array
+
+	victim     unsafe.Pointer // local from previous cycle
+	victimSize uintptr        // size of victims array
+
+	// New optionally specifies a function to generate
+	// a value when Get would otherwise return nil.
+	// It may not be changed concurrently with calls to Get.
+	New func() interface{}
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>Pool中主要的数据是local（victim后面介绍），如注释：local实际上是一个大小为P总数的数组地址，类型为[P]poolLocal，（P即GPM模型中的P，Processor），也就是每个P对应一个poolLocal。</p>
+<p>我们知道GPM模型中，每个P对应一个M（即系统线程）。sync.Pool中为每个P设置一个pool，也就是每个线程使用自己的本地pool。解决了多线程共享数据需要进行加锁，带来的性能消耗。</p>
+<h3 id=poollocal>poolLocal</h3>
+<p><img src=/6.png alt=6></p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>// Local per-P Pool appendix.
+type poolLocalInternal struct {
+	private interface{} // Can be used only by the respective P.
+	shared  poolChain   // Local P can pushHead/popHead; any P can popTail.
+}
+
+type poolLocal struct {
+	poolLocalInternal
+
+	// Prevents false sharing on widespread platforms with
+	// 128 mod (cache line size) = 0 .
+	pad [128 - unsafe.Sizeof(poolLocalInternal{})%128]byte
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>sync.Pool中进行缓存的Get和Put的一个快捷路径是检查private属性，Get时如果private不为空，则直接返回private中的数据并将private置空，Put时如果private为空，则直接将数据设置到private中。由于private只会被相同的P使用，所以不需要加锁也不需要使用原子操作。</p>
+<p>当无法使用private时，才到shared中进行读写。shared是一个链表，如下：</p>
+<h3 id=poolchain>poolChain</h3>
+<p><img src=/7.png alt=7></p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type poolChain struct {
+	head *poolChainElt
+	tail *poolChainElt
+}
+
+type poolChainElt struct {
+	poolDequeue
+	next, prev *poolChainElt
+}
+
+type poolDequeue struct {
+	headTail uint64
+	vals []eface
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>poolChain是poolDequeue的双向链表，poolDequeue的vals是一个固定大小的数组，保存了缓存的数据。headTail的高32位指向vals中下一个可以Put数据的下标，低32位指向vals最早一个可取数据的下标。</p>
+<p>poolChain中每一个poolDequeue的vals的大小是它前一个poolDequeue的vals大小的两倍。</p>
+<p>当一个poolDequeue中的vals存满后，则新建一个两倍大小vals的poolDequeue。这种数组加链表的方式，一方面利用了数组这种顺序内存结构cpu缓存友好的优点，另一方面使用链表解决了数组扩容需要进行已有数据拷贝的弊端。</p>
+<h3 id=victim>victim</h3>
+<p>victim和local变量有相同的数据结构。为了避免一次gc将缓存的数据都回收掉的问题。当进行gc时，会使用victim保存local中的数据，local设置为空，代码如下：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>
+var (
+	allPools []*Pool
+	oldPools []*Pool
+)
+func poolCleanup() {
+	for _, p := range oldPools {
+		p.victim = nil
+		p.victimSize = 0
+	}
+
+	// Move primary cache to victim cache.
+	for _, p := range allPools {
+		p.victim = p.local
+		p.victimSize = p.localSize
+		p.local = nil
+		p.localSize = 0
+	}
+
+	// The pools with non-empty primary caches now have non-empty
+	// victim caches and no pools have primary caches.
+	oldPools, allPools = allPools, nil
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>poolCleanup在gc时调用。在sync.Pool的Get方法中，如果在local中获取不到时，则会到victim中进行获取。</p>
+<h2 id=总结>总结</h2>
+<ol>
+<li>每个P一个pool，解决多线程共享数据需要加锁问题</li>
+<li>设置private快速路径</li>
+<li>固定大小数组加链表，解决扩容问题</li>
+<li>使用二级缓存victim，解决一次gc令大面积缓存数据失效的问题</li>
+</ol>
+</div>
+<div class=post-copyright>
+<p class=copyright-item>
+<span class=item-title>Author</span>
+<span class=item-content>刘玮</span>
+</p>
+<p class=copyright-item>
+<span class=item-title>LastMod</span>
+<span class=item-content>
+2022-02-12
+</span>
+</p>
+</div>
+<footer class=post-footer>
+<div class=post-tags>
+<a href=/tags/go/>Go</a>
+<a href=/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/>源码解析</a>
+</div>
+<nav class=post-nav>
+<a class=prev href=/post/go-version117-1/>
+<i class="iconfont icon-left"></i>
+<span class="prev-text nav-default">Go1.17，为什么性能可以提升5%</span>
+<span class="prev-text nav-mobile">Prev</span>
+</a>
+<a class=next href=/post/goroutine-pool/>
+<span class="next-text nav-default">Go语言内置的goroutine池</span>
+<span class="next-text nav-mobile">Next</span>
+<i class="iconfont icon-right"></i>
+</a>
+</nav>
+</footer>
+</article>
+</div>
+</div>
+</main>
+<footer id=footer class=footer>
+<div class=social-links>
+<a href=mailto:skyscar@126.com class="iconfont icon-email" title=email></a>
+<a href=https://github.com/erberry class="iconfont icon-github" title=github></a>
+<a href=https://www.zhihu.com/people/liu-wei-54-20 class="iconfont icon-zhihu" title=zhihu></a>
+<a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&action=getalbum&album_id=2008233094889144321&scene=173&subscene=0&sessionid=1644638615&enterid=1644638666&from_msgid=2247484265&from_itemidx=1&count=3&nolastread=1#wechat_redirect" class="iconfont icon-wechat" title=wechat></a>
+<a href=https://erberry.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a>
+</div>
+<div class=copyright>
+<span class=power-by>
+Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a>
+</span>
+<span class=division>|</span>
+<span class=theme-info>
+Theme -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a>
+</span>
+<div class=busuanzi-footer>
+<span id=busuanzi_container_site_pv> site pv: <span id=busuanzi_value_site_pv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+<span class=division>|</span>
+<span id=busuanzi_container_site_uv> site uv: <span id=busuanzi_value_site_uv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+</div>
+<span class=copyright-year>
+&copy;
+2022<span class=heart><i class="iconfont icon-heart"></i></span><span>刘玮</span>
+</span>
+</div>
+</footer>
+<div class=back-to-top id=back-to-top>
+<i class="iconfont icon-up"></i>
+</div>
+</div>
+<script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
+<script type=text/javascript src=/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js></script>
+<script type=application/javascript>var doNotTrack=!1;doNotTrack||(window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga('create','UA-191525181-1','auto'),ga('set','anonymizeIp',!0),ga('send','pageview'))</script>
+<script async src=https://www.google-analytics.com/analytics.js></script>
+</body>
+</html>

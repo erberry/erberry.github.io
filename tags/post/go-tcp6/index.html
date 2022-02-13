@@ -1,0 +1,709 @@
+<!doctype html><html lang=en>
+<head>
+<meta charset=utf-8>
+<meta http-equiv=x-ua-compatible content="IE=edge,chrome=1">
+<title>go源码解析之TCP连接（六）——IO多路复用之事件注册 - 刘玮的博客</title>
+<meta name=renderer content="webkit">
+<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta http-equiv=cache-control content="no-transform">
+<meta http-equiv=cache-control content="no-siteapp">
+<meta name=theme-color content="#f8f5ec">
+<meta name=msapplication-navbutton-color content="#f8f5ec">
+<meta name=apple-mobile-web-app-capable content="yes">
+<meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec">
+<meta name=author content="刘玮"><meta name=description content="go源码解析之TCP连接"><meta name=keywords content="Go,源码解析,网络编程">
+<meta name=generator content="Hugo 0.92.1 with theme even">
+<link rel=canonical href=https://erberry.github.io/post/go-tcp6/>
+<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
+<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
+<link rel=manifest href=/manifest.json>
+<link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5>
+<script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
+<link href=/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css rel=stylesheet>
+<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous>
+<meta property="og:title" content="go源码解析之TCP连接（六）——IO多路复用之事件注册">
+<meta property="og:description" content="go源码解析之TCP连接">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://erberry.github.io/post/go-tcp6/"><meta property="article:section" content="post">
+<meta property="article:published_time" content="2022-02-12T20:02:05+08:00">
+<meta property="article:modified_time" content="2022-02-12T20:02:05+08:00">
+<meta itemprop=name content="go源码解析之TCP连接（六）——IO多路复用之事件注册">
+<meta itemprop=description content="go源码解析之TCP连接"><meta itemprop=datePublished content="2022-02-12T20:02:05+08:00">
+<meta itemprop=dateModified content="2022-02-12T20:02:05+08:00">
+<meta itemprop=wordCount content="3539">
+<meta itemprop=keywords content="Go,源码解析,网络编程,"><meta name=twitter:card content="summary">
+<meta name=twitter:title content="go源码解析之TCP连接（六）——IO多路复用之事件注册">
+<meta name=twitter:description content="go源码解析之TCP连接"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
+<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]-->
+</head>
+<body>
+<div id=mobile-navbar class=mobile-navbar>
+<div class=mobile-header-logo>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<div class=mobile-navbar-icon>
+<span></span>
+<span></span>
+<span></span>
+</div>
+</div>
+<nav id=mobile-menu class="mobile-menu slideout-menu">
+<ul class=mobile-menu-list>
+<a href=/>
+<li class=mobile-menu-item>主页</li>
+</a><a href=/post/>
+<li class=mobile-menu-item>归档</li>
+</a><a href=/tags/>
+<li class=mobile-menu-item>标签</li>
+</a><a href=/categories/>
+<li class=mobile-menu-item>分类</li>
+</a><a href=/about/>
+<li class=mobile-menu-item>关于</li>
+</a>
+</ul>
+</nav>
+<div class=container id=mobile-panel>
+<header id=header class=header>
+<div class=logo-wrapper>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<nav class=site-navbar>
+<ul id=menu class=menu>
+<li class=menu-item>
+<a class=menu-item-link href=/>主页</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/post/>归档</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/tags/>标签</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/categories/>分类</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/about/>关于</a>
+</li>
+</ul>
+</nav>
+</header>
+<main id=main class=main>
+<div class=content-wrapper>
+<div id=content class=content>
+<article class=post>
+<header class=post-header>
+<h1 class=post-title>go源码解析之TCP连接（六）——IO多路复用之事件注册</h1>
+<div class=post-meta>
+<span class=post-time> 2022-02-12 </span>
+<div class=post-category>
+<a href=/categories/go/> Go </a>
+</div>
+<span id=busuanzi_container_page_pv class=more-meta> <span id=busuanzi_value_page_pv><img src=/img/spinner.svg alt=spinner.svg></span> times read </span>
+</div>
+</header>
+<div class=post-toc id=post-toc>
+<h2 class=post-toc-title>Contents</h2>
+<div class="post-toc-content always-active">
+<nav id=TableOfContents>
+<ul>
+<li>
+<ul>
+<li><a href=#tcp连接中的io多路复用>TCP连接中的IO多路复用</a>
+<ul>
+<li><a href=#1-背景>1. 背景</a></li>
+<li><a href=#2-思考>2. 思考</a></li>
+<li><a href=#3-代码跟踪>3. 代码跟踪</a></li>
+<li><a href=#4-小结>4. 小结</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+<div class=post-content>
+<p><em>go源码解析之TCP连接系列基于go源码1.16.5</em></p>
+<h2 id=tcp连接中的io多路复用>TCP连接中的IO多路复用</h2>
+<p>本章将介绍golang在tcp连接中的IO多路复用的实现</p>
+<h3 id=1-背景>1. 背景</h3>
+<p>有了解过IO多路复用的同学可能会好奇IO多路复用不就是select、poll、epoll那些内核东西么，怎么和go语言扯上关系的？</p>
+<p>没错，我们在linux上运行的网络应用程序，大多都会选择使用epoll。如果我们的应用程序语言是c或者c++，完全可以直接使用系统函数进行网络程序编写，一般我们会使用一个线程并在循环中执行epoll wait，等待可读事件的到来。可读事件到来后，网络数据的读取则交由一组线程来执行。这是一种常用的多线程与epoll结合编写网络应用程序的模式。</p>
+<p>go语言有自己的运行时，不同于其他语言直接使用系统线程，go语言中实现了更轻量的协程，go应用程序的运行就是go协程的运行和调度过程。它是如何将协程和epoll结合起来的，就是本章内容的重点。</p>
+<h3 id=2-思考>2. 思考</h3>
+<p>实现一个tcp server时，我们一般会为每个连接创建一个协程，在这个协程中循环读取连接中的数据，并由数据驱动后续的业务逻辑执行，比较经典的就是http server的做法：</p>
+<p>src/net/http/server.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (srv *Server) Serve(l net.Listener) error {
+	...
+	for {
+		rw, err := l.Accept()
+		...
+		c := srv.newConn(rw)
+		...
+		go c.serve(connCtx)
+	}
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>src/net/http/server.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (c *conn) serve(ctx context.Context) {
+	...
+
+	for {
+		w, err := c.readRequest(ctx)
+		...
+		serverHandler{c.server}.ServeHTTP(w, w.req)
+		...
+		w.finishRequest()
+		if !w.shouldReuseConnection() {
+			if w.requestBodyLimitHit || w.closedRequestBodyEarly() {
+				c.closeWriteAndWait()
+			}
+			return
+		}
+		...
+
+		if !w.conn.server.doKeepAlives() {
+			return
+		}
+
+		...
+	}
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>http server在建立新连接后，启动了一个协程来读取对方发送的数据，并执行handler，并且如果设置了连接可重用和keepalive，将继续for循环等待下一个http请求的到来并进行读取和处理。</p>
+<p>readRequest方法读取网络数据也是调用了TCPConn的Read方法（我们就不再展示代码了）。当网络数据还没有达到时，如果socket被设置为了阻塞模式，进行读取数据将导致当前协程被阻塞。当然这是不可能的，因为go中当建立tcp连接时，已经将socket设置为了非阻塞模式，可以回看第一章的sysSocket方法。（如果socket设置为阻塞模式，数据读取的系统调用将陷入内核态，直到有数据）</p>
+<p>非阻塞模式下，系统调用返回again错误，这时本协程将让出运行权并等待网络数据到来时被重新加入可运行队列，参考Read方法的实现：</p>
+<p>src/internal/poll/fd_unix.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *FD) Read(p []byte) (int, error) {
+	...
+	for {
+		n, err := ignoringEINTRIO(syscall.Read, fd.Sysfd, p)
+		if err != nil {
+			n = 0
+			if err == syscall.EAGAIN &amp;&amp; fd.pd.pollable() {
+				if err = fd.pd.waitRead(fd.isFile); err == nil {
+					continue
+				}
+			}
+		}
+		err = fd.eofError(n, err)
+		return n, err
+	}
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>以上代码在第三章中已经有介绍，当时没有再深入跟踪fd.pd.waitRead，而本章的目标就是了解go语言中epoll的使用及协程是如何被挂起等待网络数据的到来，及网络数据到来后又是如果唤醒被挂起的协程的。</p>
+<h3 id=3-代码跟踪>3. 代码跟踪</h3>
+<p>socket使用epoll非常简单，第一步使用epoll add将socket加入epoll中，第二步在循环中调用epoll wait检测IO信号。本章我们看一下在go中将socket加入epoll中的代码：</p>
+<h4 id=epoll初始化与事件注册>epoll初始化与事件注册</h4>
+<p>src/net/fd_unix.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func newFD(sysfd, family, sotype int, net string) (*netFD, error) {
+	ret := &amp;netFD{
+		pfd: poll.FD{
+			Sysfd:         sysfd,
+			IsStream:      sotype == syscall.SOCK_STREAM,
+			ZeroReadIsEOF: sotype != syscall.SOCK_DGRAM &amp;&amp; sotype != syscall.SOCK_RAW,
+		},
+		family: family,
+		sotype: sotype,
+		net:    net,
+	}
+	return ret, nil
+}
+
+func (fd *netFD) init() error {
+	return fd.pfd.Init(fd.net, true)
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>当新连接建立完成后，我们会将这个新连接的fd包装成为netFD，netFD中的一个重要成员变量是pfd，即poll包中的FD对象，经过前几章的讲解，大家应该对poll.FD已经比较了解了，TCPConn的读写方法的底层都由poll.FD实现。</p>
+<p>我们看一下poll.FD的Init方法：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *FD) Init(net string, pollable bool) error {
+    ...
+	if !pollable {
+		fd.isBlocking = 1
+		return nil
+	}
+	err := fd.pd.init(fd)
+	if err != nil {
+		// If we could not initialize the runtime poller,
+		// assume we are using blocking mode.
+		fd.isBlocking = 1
+	}
+	return err
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>如果pollable不为true，fd的isBlocking被标记为1，认为该fd处于阻塞模式下，并返回。回顾上面的代码，netFD的init方法中对pollable传入了true。如果pollable为true，则调用了fd.pd.init方法，pd是pollDesc对象，我们看一下pollDesc的init方法：</p>
+<p>src/internal/poll/fd_poll_runtime.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>var serverInit sync.Once
+
+func (pd *pollDesc) init(fd *FD) error {
+	serverInit.Do(runtime_pollServerInit)
+	ctx, errno := runtime_pollOpen(uintptr(fd.Sysfd))
+	if errno != 0 {
+		if ctx != 0 {
+			runtime_pollUnblock(ctx)
+			runtime_pollClose(ctx)
+		}
+		return errnoErr(syscall.Errno(errno))
+	}
+	pd.runtimeCtx = ctx
+	return nil
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>该方法分为三步：</p>
+<ol>
+<li>runtime_pollServerInit，如果还没有创建epoll实例，将会创建epoll实例</li>
+<li>runtime_pollOpen，将fd注册到epoll的监听事件中</li>
+<li>pd.runtimeCtx = ctx，将runtime_pollOpen返回的runtime.pollDesc对象设置到runtimeCtx中</li>
+</ol>
+<p>下面具体跟踪下前两步的方法：</p>
+<h5 id=1-epoll初始化runtime_pollserverinit>1. epoll初始化——runtime_pollServerInit</h5>
+<p>第一行serverInit.Do(runtime_pollServerInit)，serverInit是一个全局sync.Once对象，它的作用是保证指定的方法在整个程序的生命周期内最多执行一次。而runtime_pollServerInit方法是runtime包中poll_runtime_pollServerInit方法的声明，代码如下：</p>
+<p>src/runtime/netpoll.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func poll_runtime_pollServerInit() {
+	netpollGenericInit()
+}
+
+func netpollGenericInit() {
+	if atomic.Load(&amp;netpollInited) == 0 {
+		lockInit(&amp;netpollInitLock, lockRankNetpollInit)
+		lock(&amp;netpollInitLock)
+		if netpollInited == 0 {
+			netpollinit()
+			atomic.Store(&amp;netpollInited, 1)
+		}
+		unlock(&amp;netpollInitLock)
+	}
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>netpollGenericInit中的判断是否已初始化和加锁逻辑我们略过，看一下netpollinit的实现：</p>
+<p>src/runtime/netpoll_epoll.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func netpollinit() {
+	epfd = epollcreate1(_EPOLL_CLOEXEC)
+	if epfd &lt; 0 {
+		epfd = epollcreate(1024)
+		if epfd &lt; 0 {
+			println(&#34;runtime: epollcreate failed with&#34;, -epfd)
+			throw(&#34;runtime: netpollinit failed&#34;)
+		}
+		closeonexec(epfd)
+	}
+    ...
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>if判断中的epollcreate(1024)是对老版本内核的兼容，传入的参数在更老的版本（Linux 2.6.8之前）中代表了epoll可监听的最大事件数量，后面的版本只是用来提示内核初始分配数据的空间。</p>
+<h5 id=2-将fd注册到epoll的监听事件中runtime_pollopen>2. 将fd注册到epoll的监听事件中——runtime_pollOpen</h5>
+<p>src/runtime/netpoll.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func poll_runtime_pollOpen(fd uintptr) (*pollDesc, int) {
+	pd := pollcache.alloc()
+	lock(&amp;pd.lock)
+	if pd.wg != 0 &amp;&amp; pd.wg != pdReady {
+		throw(&#34;runtime: blocked write on free polldesc&#34;)
+	}
+	if pd.rg != 0 &amp;&amp; pd.rg != pdReady {
+		throw(&#34;runtime: blocked read on free polldesc&#34;)
+	}
+	pd.fd = fd
+	pd.closing = false
+	pd.everr = false
+	pd.rseq++
+	pd.rg = 0
+	pd.rd = 0
+	pd.wseq++
+	pd.wg = 0
+	pd.wd = 0
+	pd.self = pd
+	unlock(&amp;pd.lock)
+
+	var errno int32
+	errno = netpollopen(fd, pd)
+	return pd, int(errno)
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>poll_runtime_pollOpen方法主要分为四步：</p>
+<ol>
+<li>从pollcache中分配一个pollDesc对象</li>
+<li>初始化pollDesc对象</li>
+<li>调用netpollopen方法将fd注册到epoll的监听事件中，代码如下：</li>
+</ol>
+<p>src/runtime/netpoll_epoll.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func netpollopen(fd uintptr, pd *pollDesc) int32 {
+	var ev epollevent
+	ev.events = _EPOLLIN | _EPOLLOUT | _EPOLLRDHUP | _EPOLLET
+	*(**pollDesc)(unsafe.Pointer(&amp;ev.data)) = pd
+	return -epollctl(epfd, _EPOLL_CTL_ADD, int32(fd), &amp;ev)
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>该方法中将刚刚初始化的pollDesc对象作为epollevent的自定义数据传入底层。当epoll wait检测到IO事件后，除了会将IO事件关联的fd返回，还会将当时注册监听事件时传入的epollevent返回，从epollevent中我们就可以拿到当初设置的pollDesc对象。</p>
+<ol start=4>
+<li>返回pollDesc对象，我们着重看一下pollDesc对象中的link、fd、rg、wg成员变量</li>
+</ol>
+<p>src/runtime/netpoll.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type pollDesc struct {
+	link *pollDesc // in pollcache, protected by pollcache.lock
+	...
+	lock    mutex // protects the following fields
+	fd      uintptr
+	closing bool
+	everr   bool      // marks event scanning error happened
+	user    uint32    // user settable cookie
+	rseq    uintptr   // protects from stale read timers
+	rg      uintptr   // pdReady, pdWait, G waiting for read or nil
+	rt      timer     // read deadline timer (set if rt.f != nil)
+	rd      int64     // read deadline
+	wseq    uintptr   // protects from stale write timers
+	wg      uintptr   // pdReady, pdWait, G waiting for write or nil
+	wt      timer     // write deadline timer
+	wd      int64     // write deadline
+	self    *pollDesc // storage for indirect interface. See (*pollDesc).makeArg.
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>link和fd比较容易理解，link是pollcache中pollDesc对象链表；fd是fd。</p>
+<p>回顾poll.FD的Read方法，如下：</p>
+<p>src/internal/poll/fd_unix.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *FD) Read(p []byte) (int, error) {
+	...
+	for {
+		n, err := ignoringEINTRIO(syscall.Read, fd.Sysfd, p)
+		if err != nil {
+			n = 0
+			if err == syscall.EAGAIN &amp;&amp; fd.pd.pollable() {
+				if err = fd.pd.waitRead(fd.isFile); err == nil {
+					continue
+				}
+			}
+		}
+		err = fd.eofError(n, err)
+		return n, err
+	}
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>当没有数据可读取时，调用fd.pd.waitRead方法，将当前的goroutine设置到pollDesc的rg中，并调用gopark让出运行权。</p>
+<p>rg和wg就是被阻塞的读goroutine和写goroutine。当epoll wait方法返回可读或可写事件后，从epollevent中取出自定义数据pollDesc，并查看pollDesc中的rg和wg，如果有被阻塞的goroutine，则将此goroutine加入到可运行的goroutine队列。</p>
+<h3 id=4-小结>4. 小结</h3>
+<ol>
+<li>根据以上的代码跟踪，可以看到与IO多路复用相关的代码位于src/internal/poll包中，更底层的代码则位于src/runtime包中（实际上很多底层的代码都位于此包中）。</li>
+<li>新创建的socket在初始化时便会被设置为非阻塞模式，并将此socket注册到epoll中。</li>
+<li>runtime包中的pollDesc struct中记录了关联fd及由于IO未就绪被迫挂起的goroutine(rg和wg)。</li>
+</ol>
+<p>本章介绍了IO多路复用的事件注册，下章将介绍事件通知。</p>
+</div>
+<div class=post-copyright>
+<p class=copyright-item>
+<span class=item-title>Author</span>
+<span class=item-content>刘玮</span>
+</p>
+<p class=copyright-item>
+<span class=item-title>LastMod</span>
+<span class=item-content>
+2022-02-12
+</span>
+</p>
+</div>
+<footer class=post-footer>
+<div class=post-tags>
+<a href=/tags/go/>Go</a>
+<a href=/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/>源码解析</a>
+<a href=/tags/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/>网络编程</a>
+</div>
+<nav class=post-nav>
+<a class=prev href=/post/go-tcp7/>
+<i class="iconfont icon-left"></i>
+<span class="prev-text nav-default">go源码解析之TCP连接（七）——IO多路复用之事件通知</span>
+<span class="prev-text nav-mobile">Prev</span>
+</a>
+<a class=next href=/post/go-tcp5/>
+<span class="next-text nav-default">go源码解析之TCP连接（五）——Close</span>
+<span class="next-text nav-mobile">Next</span>
+<i class="iconfont icon-right"></i>
+</a>
+</nav>
+</footer>
+</article>
+</div>
+</div>
+</main>
+<footer id=footer class=footer>
+<div class=social-links>
+<a href=mailto:skyscar@126.com class="iconfont icon-email" title=email></a>
+<a href=https://github.com/erberry class="iconfont icon-github" title=github></a>
+<a href=https://www.zhihu.com/people/liu-wei-54-20 class="iconfont icon-zhihu" title=zhihu></a>
+<a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&action=getalbum&album_id=2008233094889144321&scene=173&subscene=0&sessionid=1644638615&enterid=1644638666&from_msgid=2247484265&from_itemidx=1&count=3&nolastread=1#wechat_redirect" class="iconfont icon-wechat" title=wechat></a>
+<a href=https://erberry.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a>
+</div>
+<div class=copyright>
+<span class=power-by>
+Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a>
+</span>
+<span class=division>|</span>
+<span class=theme-info>
+Theme -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a>
+</span>
+<div class=busuanzi-footer>
+<span id=busuanzi_container_site_pv> site pv: <span id=busuanzi_value_site_pv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+<span class=division>|</span>
+<span id=busuanzi_container_site_uv> site uv: <span id=busuanzi_value_site_uv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+</div>
+<span class=copyright-year>
+&copy;
+2022<span class=heart><i class="iconfont icon-heart"></i></span><span>刘玮</span>
+</span>
+</div>
+</footer>
+<div class=back-to-top id=back-to-top>
+<i class="iconfont icon-up"></i>
+</div>
+</div>
+<script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
+<script type=text/javascript src=/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js></script>
+<script type=application/javascript>var doNotTrack=!1;doNotTrack||(window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga('create','UA-191525181-1','auto'),ga('set','anonymizeIp',!0),ga('send','pageview'))</script>
+<script async src=https://www.google-analytics.com/analytics.js></script>
+</body>
+</html>

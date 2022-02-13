@@ -1,0 +1,2 @@
+User-agent: *
+Sitemap: https://erberry.github.io/sitemap.xml

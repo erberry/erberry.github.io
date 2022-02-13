@@ -1,0 +1,1131 @@
+<!doctype html><html lang=en>
+<head>
+<meta charset=utf-8>
+<meta http-equiv=x-ua-compatible content="IE=edge,chrome=1">
+<title>Panic的一生 - 刘玮的博客</title>
+<meta name=renderer content="webkit">
+<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta http-equiv=cache-control content="no-transform">
+<meta http-equiv=cache-control content="no-siteapp">
+<meta name=theme-color content="#f8f5ec">
+<meta name=msapplication-navbutton-color content="#f8f5ec">
+<meta name=apple-mobile-web-app-capable content="yes">
+<meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec">
+<meta name=author content="刘玮"><meta name=description content="panic的一生"><meta name=keywords content="Go,panic,recover,defer">
+<meta name=generator content="Hugo 0.92.1 with theme even">
+<link rel=canonical href=https://erberry.github.io/post/go-panic/>
+<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
+<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
+<link rel=manifest href=/manifest.json>
+<link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5>
+<script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
+<link href=/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css rel=stylesheet>
+<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous>
+<meta property="og:title" content="Panic的一生">
+<meta property="og:description" content="panic的一生">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://erberry.github.io/post/go-panic/"><meta property="article:section" content="post">
+<meta property="article:published_time" content="2022-02-12T20:08:05+08:00">
+<meta property="article:modified_time" content="2022-02-12T20:08:05+08:00">
+<meta itemprop=name content="Panic的一生">
+<meta itemprop=description content="panic的一生"><meta itemprop=datePublished content="2022-02-12T20:08:05+08:00">
+<meta itemprop=dateModified content="2022-02-12T20:08:05+08:00">
+<meta itemprop=wordCount content="5384">
+<meta itemprop=keywords content="Go,"><meta name=twitter:card content="summary">
+<meta name=twitter:title content="Panic的一生">
+<meta name=twitter:description content="panic的一生"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
+<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]-->
+</head>
+<body>
+<div id=mobile-navbar class=mobile-navbar>
+<div class=mobile-header-logo>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<div class=mobile-navbar-icon>
+<span></span>
+<span></span>
+<span></span>
+</div>
+</div>
+<nav id=mobile-menu class="mobile-menu slideout-menu">
+<ul class=mobile-menu-list>
+<a href=/>
+<li class=mobile-menu-item>主页</li>
+</a><a href=/post/>
+<li class=mobile-menu-item>归档</li>
+</a><a href=/tags/>
+<li class=mobile-menu-item>标签</li>
+</a><a href=/categories/>
+<li class=mobile-menu-item>分类</li>
+</a><a href=/about/>
+<li class=mobile-menu-item>关于</li>
+</a>
+</ul>
+</nav>
+<div class=container id=mobile-panel>
+<header id=header class=header>
+<div class=logo-wrapper>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<nav class=site-navbar>
+<ul id=menu class=menu>
+<li class=menu-item>
+<a class=menu-item-link href=/>主页</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/post/>归档</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/tags/>标签</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/categories/>分类</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/about/>关于</a>
+</li>
+</ul>
+</nav>
+</header>
+<main id=main class=main>
+<div class=content-wrapper>
+<div id=content class=content>
+<article class=post>
+<header class=post-header>
+<h1 class=post-title>Panic的一生</h1>
+<div class=post-meta>
+<span class=post-time> 2022-02-12 </span>
+<div class=post-category>
+<a href=/categories/go/> Go </a>
+</div>
+<span id=busuanzi_container_page_pv class=more-meta> <span id=busuanzi_value_page_pv><img src=/img/spinner.svg alt=spinner.svg></span> times read </span>
+</div>
+</header>
+<div class=post-toc id=post-toc>
+<h2 class=post-toc-title>Contents</h2>
+<div class="post-toc-content always-active">
+<nav id=TableOfContents>
+<ul>
+<li>
+<ul>
+<li><a href=#一panic概述>一、panic概述</a>
+<ul>
+<li><a href=#异常>异常</a></li>
+<li><a href=#示例>示例</a></li>
+<li><a href=#官方翻译>官方翻译</a></li>
+<li><a href=#小结>小结</a></li>
+</ul>
+</li>
+<li><a href=#二panic从哪儿来>二、panic从哪儿来</a>
+<ul>
+<li><a href=#常见的几种panic>常见的几种panic</a></li>
+<li><a href=#追踪panic来源>追踪panic来源</a></li>
+<li><a href=#小结-1>小结</a></li>
+</ul>
+</li>
+<li><a href=#三panic到哪儿去>三、panic到哪儿去</a>
+<ul>
+<li><a href=#panic后的处理流程>panic后的处理流程</a></li>
+<li><a href=#源码分析>源码分析</a></li>
+<li><a href=#小结-2>小结</a></li>
+</ul>
+</li>
+<li><a href=#最后>最后</a></li>
+</ul>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+<div class=post-content>
+<h2 id=一panic概述>一、panic概述</h2>
+<h3 id=异常>异常</h3>
+<p>异常在一些其他语言中，如c++、java，被叫做<strong>Exception</strong>，主要由<strong>抛出异常</strong>和<strong>捕获异常</strong>两部分组成。</p>
+<p>异常在go语言中，叫做panic，且由<strong>panic</strong>和<strong>recover</strong>方法组成，panic用来抛出，recover用来从panic中恢复。</p>
+<h3 id=示例>示例</h3>
+<p>以下是一段简单的panic和recover使用示例：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=kn>package</span> <span class=nx>main</span>
+
+<span class=kn>import</span> <span class=s>&#34;fmt&#34;</span>
+
+<span class=kd>func</span> <span class=nf>main</span><span class=p>()</span> <span class=p>{</span>
+    <span class=nf>f</span><span class=p>()</span>
+    <span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Returned normally from f.&#34;</span><span class=p>)</span>
+<span class=p>}</span>
+
+<span class=kd>func</span> <span class=nf>f</span><span class=p>()</span> <span class=p>{</span>
+    <span class=cm>/*defer func() {
+</span><span class=cm>        if r := recover(); r != nil {
+</span><span class=cm>            fmt.Println(&#34;Recovered in f&#34;, r)
+</span><span class=cm>        }
+</span><span class=cm>    }()*/</span>
+    <span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Calling g.&#34;</span><span class=p>)</span>
+    <span class=nf>g</span><span class=p>(</span><span class=mi>0</span><span class=p>)</span>
+    <span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Returned normally from g.&#34;</span><span class=p>)</span>
+<span class=p>}</span>
+
+<span class=kd>func</span> <span class=nf>g</span><span class=p>(</span><span class=nx>i</span> <span class=kt>int</span><span class=p>)</span> <span class=p>{</span>
+    <span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Printing in g&#34;</span><span class=p>,</span> <span class=nx>i</span><span class=p>)</span>
+    <span class=nb>panic</span><span class=p>(</span><span class=nx>i</span><span class=p>)</span>
+    <span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;After panic in g&#34;</span><span class=p>,</span> <span class=nx>i</span><span class=p>)</span>
+<span class=p>}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>我们先把defer recover部分注释，运行结果如下：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>Calling g.
+Printing in g 0
+panic: 0
+
+goroutine 1 [running]:
+main.g(0x4b14a0)
+	/tmp/sandbox2444947193/prog.go:18 +0x94
+main.f()
+	/tmp/sandbox2444947193/prog.go:12 +0x5d
+main.main()
+	/tmp/sandbox2444947193/prog.go:6 +0x19
+
+Program exited.
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到程序运行到g方法的第二行时，产生的panic导致<strong>进程异常退出</strong>，后续的代码都没有执行。</p>
+<p>再把recover注释部分打开，运行结果为：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>Calling g.
+Printing in g 0
+Recovered in f 0
+Returned normally from f.
+
+Program exited.
+</code></pre></td></tr></table>
+</div>
+</div><p>f方法中的recover捕获了panic，打印了panic传递的参数，并且main方法是<strong>正常返回</strong>的。g方法panic之后的代码没有执行。</p>
+<h3 id=官方翻译>官方翻译</h3>
+<p>panic是go的内置函数，它可以终止程序的正常执行流程并发出panic。比如当函数F调用panic，F的执行将被终止，并返回到调用者。对调用者而言，F就像调用者直接调用了panic。该过程一直跟随堆栈向上，直到当前goroutine中的所有函数都返回，此时<strong>程序崩溃</strong>。panic可以通过直接调用panic产生。同时也可能由运行时的错误所产生，例如数组越界访问。</p>
+<p>recover是go语言的内置函数，它的唯一作用是可以从panic中重新控制goroutine的执行。<strong>recover必须通过defer来运行</strong>。在正常的执行流程中，调用recover将会返回nil且没有什么其他的影响。但是如果当前的goroutine产生了panic，recover将会捕获到panic抛出的信息，同时<strong>恢复其正常的执行流程</strong>。</p>
+<h3 id=小结>小结</h3>
+<ul>
+<li>panic可以令程序崩溃（异常退出）</li>
+<li>recover可以让程序从panic中恢复，并正常运行</li>
+<li>即使单个goroutine中发生了panic，也会使整个进程崩溃</li>
+<li>recover必须通过defer来运行</li>
+</ul>
+<h2 id=二panic从哪儿来>二、panic从哪儿来</h2>
+<p>我们可以手动调用内置函数panic，但是那些空指针、数组越界等运行时panic是如何被检测到的，下面针对这一问题做一些代码调试</p>
+<h3 id=常见的几种panic>常见的几种panic</h3>
+<ol>
+<li>空指针 <code>invalid memory address or nil pointer dereference</code></li>
+<li>数组越界 <code>index out of range</code>；<code>slice bounds out of range</code></li>
+<li>除数为零 <code>integer divide by zero</code></li>
+<li>自定义panic</li>
+</ol>
+<h3 id=追踪panic来源>追踪panic来源</h3>
+<h4 id=测试代码>测试代码</h4>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=kn>package</span> <span class=nx>main</span>
+<span class=kd>func</span> <span class=nf>main</span><span class=p>()</span> <span class=p>{</span>
+    <span class=nx>a</span> <span class=o>:=</span> <span class=mi>0</span>
+    <span class=nf>testDivide</span><span class=p>(</span><span class=nx>a</span><span class=p>)</span> <span class=c1>//除零
+</span><span class=c1></span>    <span class=c1>//testOutRange() //越界
+</span><span class=c1></span>    <span class=c1>//testNil() //空指针
+</span><span class=c1></span>    <span class=c1>//panic(&#34;666&#34;) //自定义panic
+</span><span class=c1></span><span class=p>}</span>
+<span class=kd>func</span> <span class=nf>testDivide</span><span class=p>(</span><span class=nx>a</span> <span class=kt>int</span><span class=p>)</span> <span class=p>{</span>
+    <span class=nx>b</span> <span class=o>:=</span> <span class=mi>10</span> <span class=o>/</span> <span class=nx>a</span>
+    <span class=nx>_</span> <span class=p>=</span> <span class=nx>b</span>
+<span class=p>}</span>
+<span class=kd>func</span> <span class=nf>testOutRange</span><span class=p>()</span> <span class=p>{</span>
+    <span class=kd>var</span> <span class=nx>a</span> <span class=p>[]</span><span class=kt>int</span>
+    <span class=nx>a</span><span class=p>[</span><span class=mi>0</span><span class=p>]</span> <span class=p>=</span> <span class=mi>2</span>
+<span class=p>}</span>
+<span class=kd>func</span> <span class=nf>testNil</span><span class=p>()</span> <span class=p>{</span>
+    <span class=kd>var</span> <span class=nx>a</span> <span class=o>*</span><span class=kt>int</span>
+    <span class=o>*</span><span class=nx>a</span> <span class=p>=</span> <span class=mi>1</span>
+<span class=p>}</span>
+</code></pre></td></tr></table>
+</div>
+</div><h4 id=调试代码>调试代码</h4>
+<p>与linux平台下的gdb调试工具类似，dlv用来调试go语言编写的程序。</p>
+<p><strong>dlv</strong>是一个命令行工具，它包含了多个调试命令，例如运行程序、下断点、打印变量、step in、step out等。我们常用的go语言编辑器，如vscode、golang等的可视化调试也是调用dlv。</p>
+<h5 id=找出panic是怎么产生的>找出panic是怎么产生的：</h5>
+<p><em>这里我们先给出结论，具体调试过程产生的代码，请往下看</em></p>
+<ol>
+<li>
+<p>调试自定义panic方法：</p>
+<ol>
+<li>在8行处下断点</li>
+<li>打印main方法的汇编代码</li>
+<li>可以看到panic方法编译后实质是runtime包中的gopanic方法</li>
+</ol>
+</li>
+<li>
+<p>使用dlv调试testDivide中的代码，有以下几个关键步骤：</p>
+<ol>
+<li>在12行处下断点</li>
+<li>打印testDivide方法的汇编代码</li>
+<li>testDivide方法中测试参数a的值是否为零</li>
+<li>如果为零，则调用runtime包的panicdivide方法</li>
+<li>调用runtime包的panicdivide方法</li>
+<li>panicdivide方法调用了panic</li>
+<li>打印panicdivide的汇编代码，panic方法编译后实质是runtime包中的gopanic方法</li>
+</ol>
+</li>
+</ol>
+<ul>
+<li>panic方法实际调用了<strong>runtime.gopanic</strong></li>
+<li>编译后的testDivide方法中除了正常的除法逻辑，<strong>编译器塞入了判断除数是否为零的代码分支</strong>，当除数为零则进入panic流程，与自定义panic相同，同样调用了<strong>runtime.gopanic</strong></li>
+<li>其他数组越界及空指针，也都是调用了runtime.gopanic进入panic流程，不同的是：数组越界与除数为零相似，是通过编译器塞入判断分支进行越界检测；而空指针是通过<strong>访问非法地址产生中断</strong>进入panic流程。</li>
+</ul>
+<h3 id=小结-1>小结</h3>
+<ul>
+<li>panic可以由开发者调用内置函数抛出</li>
+<li>编译器将检测异常的代码加入到程序中，会出现异常时抛出</li>
+<li>某些非法指令产生中断，并由中断处理函数抛出</li>
+</ul>
+<p><strong>以下是调试全过程（不喜跳过，看下一节）：</strong>
+testDivide方法调试：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>PS E:\xxx\liuwei\test&gt; .\dlv.exe debug main.go
+Type &#39;help&#39; for list of commands.
+(dlv) b main.go:12 //下断点
+Breakpoint 1 set at 0x45b25e for main.testDivide() E:/xxx/liuwei/test/main.go:12
+(dlv) c //运行
+&gt; main.testDivide() E:/xxx/liuwei/test/main.go:12 (hits goroutine(1):1 total:1) (PC: 0x45b25e)
+     7:         //testNil()
+     8:         //panic(&#34;666&#34;)
+     9: }
+    10:
+    11: func testDivide(a int) {
+=&gt;  12:         b := 10 / a
+    13:         _ = b
+    14: }
+    15:
+    16: func testOutRange() {
+    17:         var a []int
+(dlv) disass //打印汇编代码
+TEXT main.testDivide(SB) E:/xxx/liuwei/test/main.go
+        main.go:11      0x45b250        4883ec10        sub rsp, 0x10
+        main.go:11      0x45b254        48896c2408      mov qword ptr [rsp+0x8], rbp
+        main.go:11      0x45b259        488d6c2408      lea rbp, ptr [rsp+0x8]
+=&gt;      main.go:12      0x45b25e*       488b4c2418      mov rcx, qword ptr [rsp+0x18] //向寄存器rcx中写入参数a的值
+        main.go:12      0x45b263        4885c9          test rcx, rcx //测试rcx中的值是否为0
+        main.go:12      0x45b266        7502            jnz 0x45b26a //如果不为0，跳转到0x45b26a，执行正常的除逻辑
+        main.go:12      0x45b268        eb25            jmp 0x45b28f //否则跳转到0x45b28f 
+        main.go:12      0x45b26a        b80a000000      mov eax, 0xa //地址0x45b26a，以下为正常的除逻辑
+        main.go:12      0x45b26f        4883f9ff        cmp rcx, -0x1
+        main.go:12      0x45b273        7407            jz 0x45b27c
+        main.go:12      0x45b275        4899            cqo
+        main.go:12      0x45b277        48f7f9          idiv rcx
+        main.go:12      0x45b27a        eb05            jmp 0x45b281
+        main.go:12      0x45b27c        48f7d8          neg rax
+        main.go:12      0x45b27f        31d2            xor edx, edx
+        main.go:12      0x45b281        48890424        mov qword ptr [rsp], rax
+        main.go:14      0x45b285        488b6c2408      mov rbp, qword ptr [rsp+0x8]
+        main.go:14      0x45b28a        4883c410        add rsp, 0x10
+        main.go:14      0x45b28e        c3              ret
+        main.go:12      0x45b28f        e8fceffcff      call $runtime.panicdivide //地址0x45b28f ，调用runtime包的panicdivide方法
+        main.go:1       0x45b294        90              nop
+</code></pre></td></tr></table>
+</div>
+</div><div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=p>(</span><span class=nx>dlv</span><span class=p>)</span> <span class=nx>si</span> <span class=c1>//单条指令执行
+</span><span class=c1></span><span class=p>&gt;</span> <span class=nx>main</span><span class=p>.</span><span class=nf>testDivide</span><span class=p>()</span> <span class=nx>E</span><span class=p>:</span><span class=o>/</span><span class=nx>xxx</span><span class=o>/</span><span class=nx>liuwei</span><span class=o>/</span><span class=nx>test</span><span class=o>/</span><span class=nx>main</span><span class=p>.</span><span class=k>go</span><span class=p>:</span><span class=mi>1</span> <span class=p>(</span><span class=nx>PC</span><span class=p>:</span> <span class=mh>0x45b258</span><span class=p>)</span>
+<span class=p>=&gt;</span>   <span class=mi>1</span><span class=p>:</span> <span class=kn>package</span> <span class=nx>main</span>
+        <span class=mi>2</span><span class=p>:</span>
+        <span class=mi>3</span><span class=p>:</span> <span class=kd>func</span> <span class=nf>main</span><span class=p>()</span> <span class=p>{</span>
+        <span class=mi>4</span><span class=p>:</span>         <span class=nf>testDivide</span><span class=p>()</span>
+        <span class=mi>5</span><span class=p>:</span>         <span class=c1>//testOutRange()
+</span><span class=c1></span>        <span class=mi>6</span><span class=p>:</span>         <span class=c1>//testNil()
+</span><span class=c1></span><span class=p>(</span><span class=nx>dlv</span><span class=p>)</span> <span class=nx>disass</span> <span class=c1>//打印汇编代码
+</span><span class=c1></span><span class=nx>TEXT</span> <span class=nx>main</span><span class=p>.</span><span class=nf>testDivide</span><span class=p>(</span><span class=nx>SB</span><span class=p>)</span> <span class=nx>E</span><span class=p>:</span><span class=o>/</span><span class=nx>xxxliuwei</span><span class=o>/</span><span class=nx>test</span><span class=o>/</span><span class=nx>main</span><span class=p>.</span><span class=k>go</span>
+           <span class=nx>main</span><span class=p>.</span><span class=k>go</span><span class=p>:</span><span class=mi>9</span>       <span class=mh>0x45b240</span>        <span class=mi>4883</span><span class=nx>ec10</span>                <span class=nx>sub</span> <span class=nx>rsp</span><span class=p>,</span> <span class=mh>0x10</span>
+           <span class=nx>main</span><span class=p>.</span><span class=k>go</span><span class=p>:</span><span class=mi>9</span>       <span class=mh>0x45b244</span>        <span class=mi>48896</span><span class=nx>c2408</span>              <span class=nx>mov</span> <span class=nx>qword</span> <span class=nx>ptr</span> <span class=p>[</span><span class=nx>rsp</span><span class=o>+</span><span class=mh>0x8</span><span class=p>],</span> <span class=nx>rbp</span>
+           <span class=nx>main</span><span class=p>.</span><span class=k>go</span><span class=p>:</span><span class=mi>9</span>       <span class=mh>0x45b249</span>        <span class=mi>488</span><span class=nx>d6c2408</span>              <span class=nx>lea</span> <span class=nx>rbp</span><span class=p>,</span> <span class=nx>ptr</span> <span class=p>[</span><span class=nx>rsp</span><span class=o>+</span><span class=mh>0x8</span><span class=p>]</span>
+           <span class=nx>main</span><span class=p>.</span><span class=k>go</span><span class=p>:</span><span class=mi>10</span>      <span class=mh>0x45b24e</span>        <span class=mi>48</span><span class=nx>c7042400000000</span>        <span class=nx>mov</span> <span class=nx>qword</span> <span class=nx>ptr</span> <span class=p>[</span><span class=nx>rsp</span><span class=p>],</span> <span class=mh>0x0</span>
+           <span class=nx>main</span><span class=p>.</span><span class=k>go</span><span class=p>:</span><span class=mi>11</span>      <span class=mh>0x45b256</span><span class=o>*</span>       <span class=nx>eb00</span>                    <span class=nx>jmp</span> <span class=mh>0x45b258</span>
+<span class=p>=&gt;</span>      <span class=nx>main</span><span class=p>.</span><span class=k>go</span><span class=p>:</span><span class=mi>1</span>       <span class=mh>0x45b258</span>        <span class=nx>e833f0fcff</span>              <span class=nx>call</span> <span class=err>$</span><span class=nx>runtime</span><span class=p>.</span><span class=nx>panicdivide</span> <span class=c1>//由于除数为0，跳转到了此处，准备panic
+</span><span class=c1></span>           <span class=nx>main</span><span class=p>.</span><span class=k>go</span><span class=p>:</span><span class=mi>1</span>       <span class=mh>0x45b25d</span>        <span class=mi>90</span>                      <span class=nf>nop</span>
+<span class=p>(</span><span class=nx>dlv</span><span class=p>)</span> <span class=nx>si</span> <span class=c1>//单条指令执行
+</span><span class=c1></span><span class=p>&gt;</span> <span class=nx>runtime</span><span class=p>.</span><span class=nf>panicdivide</span><span class=p>()</span> <span class=nx>C</span><span class=p>:</span><span class=o>/</span><span class=nx>go1</span><span class=mf>.13</span><span class=o>/</span><span class=k>go</span><span class=o>/</span><span class=nx>src</span><span class=o>/</span><span class=nx>runtime</span><span class=o>/</span><span class=nx>panic</span><span class=p>.</span><span class=k>go</span><span class=p>:</span><span class=mi>176</span> <span class=p>(</span><span class=nx>PC</span><span class=p>:</span> <span class=mh>0x42a290</span><span class=p>)</span>
+<span class=nx>Warning</span><span class=p>:</span> <span class=nx>debugging</span> <span class=nx>optimized</span> <span class=nx>function</span>
+      <span class=mi>171</span><span class=p>:</span>         <span class=nb>panic</span><span class=p>(</span><span class=nx>shiftError</span><span class=p>)</span>
+      <span class=mi>172</span><span class=p>:</span> <span class=p>}</span>
+      <span class=mi>173</span><span class=p>:</span>
+      <span class=mi>174</span><span class=p>:</span> <span class=kd>var</span> <span class=nx>divideError</span> <span class=p>=</span> <span class=nb>error</span><span class=p>(</span><span class=nf>errorString</span><span class=p>(</span><span class=s>&#34;integer divide by zero&#34;</span><span class=p>))</span>
+      <span class=mi>175</span><span class=p>:</span>
+<span class=p>=&gt;</span> <span class=mi>176</span><span class=p>:</span> <span class=kd>func</span> <span class=nf>panicdivide</span><span class=p>()</span> <span class=p>{</span> <span class=c1>//进入runtime包的panicdivide方法
+</span><span class=c1></span>      <span class=mi>177</span><span class=p>:</span>         <span class=nf>panicCheck2</span><span class=p>(</span><span class=s>&#34;integer divide by zero&#34;</span><span class=p>)</span>
+      <span class=mi>178</span><span class=p>:</span>         <span class=nb>panic</span><span class=p>(</span><span class=nx>divideError</span><span class=p>)</span>
+      <span class=mi>179</span><span class=p>:</span> <span class=p>}</span>
+      <span class=mi>180</span><span class=p>:</span>
+      <span class=mi>181</span><span class=p>:</span> <span class=kd>var</span> <span class=nx>overflowError</span> <span class=p>=</span> <span class=nb>error</span><span class=p>(</span><span class=nf>errorString</span><span class=p>(</span><span class=s>&#34;integer overflow&#34;</span><span class=p>))</span>
+</code></pre></td></tr></table>
+</div>
+</div><div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>(dlv) disass //打印汇编代码
+TEXT runtime.panicdivide(SB) C:/go1.13/go/src/runtime/panic.go
+=&gt;      panic.go:176    0x42a290        65488b0c2528000000      mov rcx, qword ptr gs:[0x28]
+           panic.go:176    0x42a299        488b8900000000          mov rcx, qword ptr [rcx]
+           panic.go:176    0x42a2a0        483b6110                cmp rsp, qword ptr [rcx+0x10]
+           panic.go:176    0x42a2a4        764d                    jbe 0x42a2f3
+           panic.go:176    0x42a2a6        4883ec18                sub rsp, 0x18
+           panic.go:176    0x42a2aa        48896c2410              mov qword ptr [rsp+0x10], rbp
+           panic.go:176    0x42a2af        488d6c2410              lea rbp, ptr [rsp+0x10]
+           panic.go:177    0x42a2b4        488d058e370500          lea rax, ptr [_image_base__+514633]
+           panic.go:177    0x42a2bb        48890424                mov qword ptr [rsp], rax
+           panic.go:177    0x42a2bf        48c744240816000000      mov qword ptr [rsp+0x8], 0x16
+           panic.go:177    0x42a2c8        e8c3f7ffff              call $runtime.panicCheck2
+           panic.go:178    0x42a2cd        488b056cba0900          mov rax, qword ptr [runtime.divideError]
+           panic.go:178    0x42a2d4        488b0d6dba0900          mov rcx, qword ptr [runtime.divideError+8]
+           panic.go:178    0x42a2db        4885c0                  test rax, rax
+           panic.go:178    0x42a2de        7404                    jz 0x42a2e4
+           panic.go:178    0x42a2e0        488b4008                mov rax, qword ptr [rax+0x8]
+           panic.go:178    0x42a2e4        48890424                mov qword ptr [rsp], rax
+           panic.go:178    0x42a2e8        48894c2408              mov qword ptr [rsp+0x8], rcx
+           panic.go:178    0x42a2ed        e8be0b0000              call $runtime.gopanic //panic编译以后是runtime包中的gopanic方法
+           panic.go:178    0x42a2f2        90                      nop
+           panic.go:176    0x42a2f3        e8c8620200              call $runtime.morestack_noctxt
+           panic.go:176    0x42a2f8        eb96                    jmp $runtime.panicdivide
+</code></pre></td></tr></table>
+</div>
+</div><p><strong>自定义panic调试：</strong></p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>PS E:\xxx\liuwei\test&gt; .\dlv.exe debug main.go
+Type &#39;help&#39; for list of commands.
+(dlv) b main.go:7 //下断点
+Breakpoint 1 set at 0x45b224 for main.main() E:/xxx/liuwei/test/main.go:7
+(dlv) c //运行
+&gt; main.main() E:/xxx/liuwei/test/main.go:7 (hits goroutine(1):1 total:1) (PC: 0x45b224)
+        2:
+        3: func main() {
+        4:         //testDivide()
+        5:         //testOutRange()
+        6:         //testNil()
+=&gt;   7:         panic(&#34;666&#34;)
+        8: }
+        9:
+       10: func testDivide() {
+       11:         a := 0
+       12:         a = 10 / a
+(dlv) disass //打印汇编代码
+TEXT main.main(SB) E:/xxx/liuwei/test/main.go
+           main.go:3       0x45b200        65488b0c2528000000      mov rcx, qword ptr gs:[0x28]
+           main.go:3       0x45b209        488b8900000000          mov rcx, qword ptr [rcx]
+           main.go:3       0x45b210        483b6110                cmp rsp, qword ptr [rcx+0x10]
+           main.go:3       0x45b214        762b                    jbe 0x45b241
+           main.go:3       0x45b216        4883ec18                sub rsp, 0x18
+           main.go:3       0x45b21a        48896c2410              mov qword ptr [rsp+0x10], rbp
+           main.go:3       0x45b21f        488d6c2410              lea rbp, ptr [rsp+0x10]
+=&gt;      main.go:7       0x45b224*       488d0555c70000          lea rax, ptr [_image_base__+424320]
+           main.go:7       0x45b22b        48890424                mov qword ptr [rsp], rax
+           main.go:7       0x45b22f        488d05ca870200          lea rax, ptr [_image_base__+539136]
+           main.go:7       0x45b236        4889442408              mov qword ptr [rsp+0x8], rax
+           main.go:7       0x45b23b        e870fcfcff              call $runtime.gopanic //panic编译以后是runtime包中的gopanic方法
+           main.go:7       0x45b240        90                      nop
+           main.go:3       0x45b241        e87a53ffff              call $runtime.morestack_noctxt
+           main.go:1       0x45b246        ebb8                    jmp $main.main
+</code></pre></td></tr></table>
+</div>
+</div><h2 id=三panic到哪儿去>三、panic到哪儿去</h2>
+<h3 id=panic后的处理流程>panic后的处理流程</h3>
+<p>由于panic和defer有着难解难分的关系，我们先了解一下defer。</p>
+<p><strong>defer定义</strong>的官翻：</p>
+<p>defer语句将函数调用保存到一个列表上。保存的调用列表在当前函数返回前执行。Defer通常用于简化执行各种清理操作的函数。</p>
+<p>通俗地说，就是defer保证函数调用不管在什么情况下（即使当前函数发生panic），在当前函数返回前<strong>必然执行</strong>。另外defer的函数调用符合<strong>先进后出</strong>的规则，即先defer的函数后执行。</p>
+<p>我们看一个示例程序，它是第一节示例程序的升级版本，方法g中会调用自身：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=kn>package</span> <span class=nx>main</span>
+
+<span class=kn>import</span> <span class=s>&#34;fmt&#34;</span>
+
+<span class=kd>func</span> <span class=nf>main</span><span class=p>()</span> <span class=p>{</span>
+	<span class=k>defer</span> <span class=kd>func</span><span class=p>()</span> <span class=p>{</span>
+		<span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;defer in main&#34;</span><span class=p>)</span>
+	<span class=p>}()</span>
+	<span class=nf>f</span><span class=p>()</span>
+	<span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Returned normally from f.&#34;</span><span class=p>)</span>
+<span class=p>}</span>
+
+<span class=kd>func</span> <span class=nf>f</span><span class=p>()</span> <span class=p>{</span>
+	<span class=cm>/*defer func() {
+</span><span class=cm>	    if r := recover(); r != nil {
+</span><span class=cm>	        fmt.Println(&#34;Recovered in f&#34;, r)
+</span><span class=cm>	    }
+</span><span class=cm>	}()*/</span>
+	<span class=k>defer</span> <span class=kd>func</span><span class=p>()</span> <span class=p>{</span>
+		<span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;defer in f&#34;</span><span class=p>)</span>
+	<span class=p>}()</span>
+	<span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Calling g.&#34;</span><span class=p>)</span>
+	<span class=nf>g</span><span class=p>(</span><span class=mi>0</span><span class=p>)</span>
+	<span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Returned normally from g.&#34;</span><span class=p>)</span>
+<span class=p>}</span>
+
+<span class=kd>func</span> <span class=nf>g</span><span class=p>(</span><span class=nx>i</span> <span class=kt>int</span><span class=p>)</span> <span class=p>{</span>
+	<span class=k>if</span> <span class=nx>i</span> <span class=p>&gt;</span> <span class=mi>3</span> <span class=p>{</span>
+		<span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Panicking!&#34;</span><span class=p>)</span>
+		<span class=nb>panic</span><span class=p>(</span><span class=nx>fmt</span><span class=p>.</span><span class=nf>Sprintf</span><span class=p>(</span><span class=s>&#34;%v&#34;</span><span class=p>,</span> <span class=nx>i</span><span class=p>))</span>
+	<span class=p>}</span>
+	<span class=k>defer</span> <span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Defer in g&#34;</span><span class=p>,</span> <span class=nx>i</span><span class=p>)</span>
+	<span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=s>&#34;Printing in g&#34;</span><span class=p>,</span> <span class=nx>i</span><span class=p>)</span>
+	<span class=nf>g</span><span class=p>(</span><span class=nx>i</span> <span class=o>+</span> <span class=mi>1</span><span class=p>)</span>
+<span class=p>}</span>
+</code></pre></td></tr></table>
+</div>
+</div><p>程序运行结果如下：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>Calling g.
+Printing in g 0
+Printing in g 1
+Printing in g 2
+Printing in g 3
+Panicking!
+Defer in g 3
+Defer in g 2
+Defer in g 1
+Defer in g 0
+defer in f
+defer in main
+panic: 4
+
+goroutine 1 [running]:
+main.g(0x4)
+        /tmp/sandbox2114608904/prog.go:30 +0x1ec
+main.g(0x3)
+        /tmp/sandbox2114608904/prog.go:34 +0x136
+main.g(0x2)
+        /tmp/sandbox2114608904/prog.go:34 +0x136
+main.g(0x1)
+        /tmp/sandbox2114608904/prog.go:34 +0x136
+main.g(0x0)
+        /tmp/sandbox2114608904/prog.go:34 +0x136
+main.f()
+        /tmp/sandbox2114608904/prog.go:23 +0x7f
+main.main()
+        /tmp/sandbox2114608904/prog.go:9 +0x3f
+
+Program exited
+</code></pre></td></tr></table>
+</div>
+</div><p>从运行结果可以观察到defer的作用，即使方法g中当i为4时发生了panic，每个defer的函数调用依然正常被执行了，而且是先进后出的顺序被执行。就像是每次defer时，将被defer的函数调用push到一个栈数据结构中，当返回时，再从栈中挨个将defer的函数pop出来并执行。</p>
+<p>recover函数调用必须使用defer关键字，就是因为defer的函数调用必然会被执行。可以将以上实例中defer recover部分打开观察输出，与第一节中defer recover输出类似，程序可以正常执行并正常退出。</p>
+<h3 id=源码分析>源码分析</h3>
+<p>我们再对源码做一下简单分析，以加深对panic及recover处理流程的理解。</p>
+<p>首先简单了解下有关defer的一对方法：deferproc和deferreturn。</p>
+<ul>
+<li>deferproc即defer关键字的实现，它将defer的函数调用push到当前goroutine中的defer链表头部</li>
+<li>deferreturn，当一个函数中包含defer操作，编译器将在函数返回前插入一条deferreturn调用，deferreturn会将当前函数中defer的函数调用依次执行完毕</li>
+</ul>
+<p>panic方法对应的实现为runtime.gopanic，recover方法对应的实现为runtime.gorecover。</p>
+<p>源码如下（为了简化理解，省略了很多分支判断，只保留主流程的代码）：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span><span class=lnt>29
+</span><span class=lnt>30
+</span><span class=lnt>31
+</span><span class=lnt>32
+</span><span class=lnt>33
+</span><span class=lnt>34
+</span><span class=lnt>35
+</span><span class=lnt>36
+</span><span class=lnt>37
+</span><span class=lnt>38
+</span><span class=lnt>39
+</span><span class=lnt>40
+</span><span class=lnt>41
+</span><span class=lnt>42
+</span><span class=lnt>43
+</span><span class=lnt>44
+</span><span class=lnt>45
+</span><span class=lnt>46
+</span><span class=lnt>47
+</span><span class=lnt>48
+</span><span class=lnt>49
+</span><span class=lnt>50
+</span><span class=lnt>51
+</span><span class=lnt>52
+</span><span class=lnt>53
+</span><span class=lnt>54
+</span><span class=lnt>55
+</span><span class=lnt>56
+</span><span class=lnt>57
+</span><span class=lnt>58
+</span><span class=lnt>59
+</span><span class=lnt>60
+</span><span class=lnt>61
+</span><span class=lnt>62
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func gopanic(e interface{}) {
+    //获取当前goroutine的对象gp
+    gp := getg()
+    ...
+    //将当前panic添加到gp的panic链表头部
+    var p _panic
+    p.arg = e
+    p.link = gp._panic
+    gp._panic = (*_panic)(noescape(unsafe.Pointer(&amp;p)))
+    ...
+    //循环执行defer链表中的函数
+    for {
+        //获取gp的defer链表
+        d := gp._defer
+        if d == nil {
+            //如果没有defer，退出循环
+            break
+        }
+        ...
+        done := true
+        ...
+        //执行defer的函数调用
+        var regs abi.RegArgs
+        reflectcall(nil, unsafe.Pointer(d.fn), deferArgs(d), uint32(d.siz), uint32(d.siz), uint32(d.siz), &amp;regs)
+        ...
+        p.argp = nil
+        d._panic = nil
+        ...
+        if done {
+            //清理defer对象，并设置下一个defer对象到gp的defer链表头部
+            d.fn = nil
+            gp._defer = d.link
+            freedefer(d)
+        }
+        if p.recovered {
+            //如果defer运行了recover函数，调用内置的recovery函数恢复调用
+            //recovery函数会将当前的调用栈改变到deferreturn，从而使得程序可以继续正常运行
+            ...
+            gp.sigcode0 = uintptr(sp)
+            gp.sigcode1 = pc
+            mcall(recovery)
+            throw(&#34;recovery failed&#34;) // mcall should not return
+        }
+    }
+
+    //如果没有recover，defer执行完毕，打印panic信息，并退出进程
+    preprintpanics(gp._panic)
+    fatalpanic(gp._panic) // should not return
+    *(*int)(nil) = 0      // not reached
+}
+
+//recover方法的实现
+func gorecover(argp uintptr) interface{} {
+    
+    gp := getg()
+    p := gp._panic
+    ...
+    //recover方法仅有的一个作用，将recovered置为true
+    p.recovered = true
+    return p.arg
+}
+
+</code></pre></td></tr></table>
+</div>
+</div><h3 id=小结-2>小结</h3>
+<ul>
+<li>panic处理过程中会检测是否有defer的函数调用</li>
+<li>如果有，按照先进后出的顺序依次执行</li>
+<li>如果defer中有recover调用，则将调用栈修改到deferreturn，使得程序正常执行</li>
+<li>否则当defer的函数调用执行完后，打印panic信息，进程退出</li>
+</ul>
+<h2 id=最后>最后</h2>
+<p>最后我们通过一个简单的例子，看一下recover后如何打印panic信息，及如何阅读panic信息</p>
+<p>示例是一个除零的panic：</p>
+<ol>
+<li>recover后，调用printPanicInfo方法</li>
+<li>printPanicInfo使用runtime.Stack方法收集调用堆栈信息</li>
+<li>r为recover返回的参数，即panic传入的参数，一般为panic的具体原因，本示例为：<code>runtime error: integer divide by zero</code></li>
+<li>将panic原因和堆栈信息拼接并打印</li>
+</ol>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span><span class=lnt>18
+</span><span class=lnt>19
+</span><span class=lnt>20
+</span><span class=lnt>21
+</span><span class=lnt>22
+</span><span class=lnt>23
+</span><span class=lnt>24
+</span><span class=lnt>25
+</span><span class=lnt>26
+</span><span class=lnt>27
+</span><span class=lnt>28
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-go data-lang=go><span class=kn>package</span> <span class=nx>main</span>
+<span class=kn>import</span> <span class=p>(</span>
+    <span class=s>&#34;fmt&#34;</span>
+    <span class=s>&#34;runtime&#34;</span>
+<span class=p>)</span>
+<span class=kd>func</span> <span class=nf>main</span><span class=p>()</span> <span class=p>{</span>
+    <span class=nf>f</span><span class=p>()</span>
+<span class=p>}</span>
+<span class=kd>func</span> <span class=nf>f</span><span class=p>()</span> <span class=p>{</span>
+    <span class=k>defer</span> <span class=kd>func</span><span class=p>()</span> <span class=p>{</span>
+        <span class=k>if</span> <span class=nx>r</span> <span class=o>:=</span> <span class=nb>recover</span><span class=p>();</span> <span class=nx>r</span> <span class=o>!=</span> <span class=kc>nil</span> <span class=p>{</span>
+            <span class=nf>printPanicInfo</span><span class=p>(</span><span class=nx>r</span><span class=p>)</span>
+        <span class=p>}</span>
+    <span class=p>}()</span>
+    <span class=nf>g</span><span class=p>()</span>
+<span class=p>}</span>
+<span class=kd>func</span> <span class=nf>g</span><span class=p>()</span> <span class=p>{</span>
+    <span class=nx>a</span> <span class=o>:=</span> <span class=mi>10</span>
+    <span class=kd>var</span> <span class=nx>b</span> <span class=kt>int</span>
+    <span class=nx>a</span> <span class=p>=</span> <span class=nx>a</span> <span class=o>/</span> <span class=nx>b</span>
+<span class=p>}</span>
+<span class=kd>func</span> <span class=nf>printPanicInfo</span><span class=p>(</span><span class=nx>r</span> <span class=kd>interface</span><span class=p>{})</span> <span class=p>{</span>
+    <span class=nx>buf</span> <span class=o>:=</span> <span class=nb>make</span><span class=p>([]</span><span class=kt>byte</span><span class=p>,</span> <span class=mi>64</span><span class=o>&lt;&lt;</span><span class=mi>10</span><span class=p>)</span>
+    <span class=nx>buf</span> <span class=p>=</span> <span class=nx>buf</span><span class=p>[:</span><span class=nx>runtime</span><span class=p>.</span><span class=nf>Stack</span><span class=p>(</span><span class=nx>buf</span><span class=p>,</span> <span class=kc>false</span><span class=p>)]</span>
+    <span class=nx>s</span> <span class=o>:=</span> <span class=nx>fmt</span><span class=p>.</span><span class=nf>Sprintf</span><span class=p>(</span><span class=s>&#34;%s\n%s&#34;</span><span class=p>,</span> <span class=nx>r</span><span class=p>,</span> <span class=nx>buf</span><span class=p>)</span>
+    <span class=nx>fmt</span><span class=p>.</span><span class=nf>Println</span><span class=p>(</span><span class=nx>s</span><span class=p>)</span>
+<span class=p>}</span>
+
+</code></pre></td></tr></table>
+</div>
+</div><p>输出为：</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span><span class=lnt>16
+</span><span class=lnt>17
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>//panic的原因
+runtime error: integer divide by zero  
+//goroutine的id
+goroutine 1 [running]: 
+//下面是runtime.Stack方法调用时的调用堆栈链，方法名称和方法被调用的文件行数成对出现
+main.printPanicInfo(0x4b78c0, 0x572a10) //方法名称
+        E:/xxx/liuwei/test/main.go:29 +0x74 //方法所在的文件和行数
+main.f.func1()
+        E:/xxx/liuwei/test/main.go:15 +0x59
+panic(0x4b78c0, 0x572a10)
+        C:/go1.13/go/src/runtime/panic.go:679 +0x1c0 //panic被调用
+main.g(...)
+        E:/xxx/liuwei/test/main.go:24 //发生panic的代码行数
+main.f()
+        E:/xxx/liuwei/test/main.go:18 +0x50
+main.main()
+        E:/xxx/liuwei/test/main.go:9 +0x27
+</code></pre></td></tr></table>
+</div>
+</div><p>打印的信息中主要由<strong>panic原因</strong>和<strong>调用堆栈</strong>组成，我们阅读堆栈信息时，可以首先找到<strong>runtime.panic</strong>，它的<strong>下一条堆栈记录</strong>就是发生panic的代码具体行数。然后再结合panic的原因信息，一般会很快了解到panic发生的原因。</p>
+<p>另外除了panic之外还有一种<strong>fatalpanic</strong>，这种严重的异常<strong>无法使用recover恢复</strong>，一般是运行时检测到不可恢复的操作时抛出。例如发生map并发写时会<code> throw("concurrent map writes")</code>，导致进程崩溃。</p>
+</div>
+<div class=post-copyright>
+<p class=copyright-item>
+<span class=item-title>Author</span>
+<span class=item-content>刘玮</span>
+</p>
+<p class=copyright-item>
+<span class=item-title>LastMod</span>
+<span class=item-content>
+2022-02-12
+</span>
+</p>
+</div>
+<footer class=post-footer>
+<div class=post-tags>
+<a href=/tags/go/>Go</a>
+</div>
+<nav class=post-nav>
+<a class=prev href=/post/go-callvis/>
+<i class="iconfont icon-left"></i>
+<span class="prev-text nav-default">Go代码调用链路可视化工具—go-callvis</span>
+<span class="prev-text nav-mobile">Prev</span>
+</a>
+<a class=next href=/post/go-why-generics/>
+<span class="next-text nav-default">Why generics in Go？How？</span>
+<span class="next-text nav-mobile">Next</span>
+<i class="iconfont icon-right"></i>
+</a>
+</nav>
+</footer>
+</article>
+</div>
+</div>
+</main>
+<footer id=footer class=footer>
+<div class=social-links>
+<a href=mailto:skyscar@126.com class="iconfont icon-email" title=email></a>
+<a href=https://github.com/erberry class="iconfont icon-github" title=github></a>
+<a href=https://www.zhihu.com/people/liu-wei-54-20 class="iconfont icon-zhihu" title=zhihu></a>
+<a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&action=getalbum&album_id=2008233094889144321&scene=173&subscene=0&sessionid=1644638615&enterid=1644638666&from_msgid=2247484265&from_itemidx=1&count=3&nolastread=1#wechat_redirect" class="iconfont icon-wechat" title=wechat></a>
+<a href=https://erberry.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a>
+</div>
+<div class=copyright>
+<span class=power-by>
+Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a>
+</span>
+<span class=division>|</span>
+<span class=theme-info>
+Theme -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a>
+</span>
+<div class=busuanzi-footer>
+<span id=busuanzi_container_site_pv> site pv: <span id=busuanzi_value_site_pv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+<span class=division>|</span>
+<span id=busuanzi_container_site_uv> site uv: <span id=busuanzi_value_site_uv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+</div>
+<span class=copyright-year>
+&copy;
+2022<span class=heart><i class="iconfont icon-heart"></i></span><span>刘玮</span>
+</span>
+</div>
+</footer>
+<div class=back-to-top id=back-to-top>
+<i class="iconfont icon-up"></i>
+</div>
+</div>
+<script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
+<script type=text/javascript src=/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js></script>
+<script type=application/javascript>var doNotTrack=!1;doNotTrack||(window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga('create','UA-191525181-1','auto'),ga('set','anonymizeIp',!0),ga('send','pageview'))</script>
+<script async src=https://www.google-analytics.com/analytics.js></script>
+</body>
+</html>

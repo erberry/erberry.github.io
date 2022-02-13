@@ -1,0 +1,371 @@
+<!doctype html><html lang=en>
+<head>
+<meta charset=utf-8>
+<meta http-equiv=x-ua-compatible content="IE=edge,chrome=1">
+<title>go源码解析之TCP连接（五）——Close - 刘玮的博客</title>
+<meta name=renderer content="webkit">
+<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta http-equiv=cache-control content="no-transform">
+<meta http-equiv=cache-control content="no-siteapp">
+<meta name=theme-color content="#f8f5ec">
+<meta name=msapplication-navbutton-color content="#f8f5ec">
+<meta name=apple-mobile-web-app-capable content="yes">
+<meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec">
+<meta name=author content="刘玮"><meta name=description content="go源码解析之TCP连接"><meta name=keywords content="Go,源码解析,网络编程">
+<meta name=generator content="Hugo 0.92.1 with theme even">
+<link rel=canonical href=https://erberry.github.io/post/go-tcp5/>
+<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
+<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
+<link rel=manifest href=/manifest.json>
+<link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5>
+<script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
+<link href=/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css rel=stylesheet>
+<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous>
+<meta property="og:title" content="go源码解析之TCP连接（五）——Close">
+<meta property="og:description" content="go源码解析之TCP连接">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://erberry.github.io/post/go-tcp5/"><meta property="article:section" content="post">
+<meta property="article:published_time" content="2022-02-12T20:01:05+08:00">
+<meta property="article:modified_time" content="2022-02-12T20:01:05+08:00">
+<meta itemprop=name content="go源码解析之TCP连接（五）——Close">
+<meta itemprop=description content="go源码解析之TCP连接"><meta itemprop=datePublished content="2022-02-12T20:01:05+08:00">
+<meta itemprop=dateModified content="2022-02-12T20:01:05+08:00">
+<meta itemprop=wordCount content="920">
+<meta itemprop=keywords content="Go,源码解析,网络编程,"><meta name=twitter:card content="summary">
+<meta name=twitter:title content="go源码解析之TCP连接（五）——Close">
+<meta name=twitter:description content="go源码解析之TCP连接"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
+<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]-->
+</head>
+<body>
+<div id=mobile-navbar class=mobile-navbar>
+<div class=mobile-header-logo>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<div class=mobile-navbar-icon>
+<span></span>
+<span></span>
+<span></span>
+</div>
+</div>
+<nav id=mobile-menu class="mobile-menu slideout-menu">
+<ul class=mobile-menu-list>
+<a href=/>
+<li class=mobile-menu-item>主页</li>
+</a><a href=/post/>
+<li class=mobile-menu-item>归档</li>
+</a><a href=/tags/>
+<li class=mobile-menu-item>标签</li>
+</a><a href=/categories/>
+<li class=mobile-menu-item>分类</li>
+</a><a href=/about/>
+<li class=mobile-menu-item>关于</li>
+</a>
+</ul>
+</nav>
+<div class=container id=mobile-panel>
+<header id=header class=header>
+<div class=logo-wrapper>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<nav class=site-navbar>
+<ul id=menu class=menu>
+<li class=menu-item>
+<a class=menu-item-link href=/>主页</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/post/>归档</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/tags/>标签</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/categories/>分类</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/about/>关于</a>
+</li>
+</ul>
+</nav>
+</header>
+<main id=main class=main>
+<div class=content-wrapper>
+<div id=content class=content>
+<article class=post>
+<header class=post-header>
+<h1 class=post-title>go源码解析之TCP连接（五）——Close</h1>
+<div class=post-meta>
+<span class=post-time> 2022-02-12 </span>
+<div class=post-category>
+<a href=/categories/go/> Go </a>
+</div>
+<span id=busuanzi_container_page_pv class=more-meta> <span id=busuanzi_value_page_pv><img src=/img/spinner.svg alt=spinner.svg></span> times read </span>
+</div>
+</header>
+<div class=post-toc id=post-toc>
+<h2 class=post-toc-title>Contents</h2>
+<div class="post-toc-content always-active">
+<nav id=TableOfContents>
+<ul>
+<li>
+<ul>
+<li><a href=#连接关闭>连接关闭</a>
+<ul>
+<li><a href=#1-conn的close方法>1. conn的Close方法</a></li>
+<li><a href=#2-回顾setfinalizer>2. 回顾SetFinalizer</a></li>
+<li><a href=#3-pollfd的close方法>3. poll.FD的Close方法</a></li>
+<li><a href=#4-小结>4. 小结</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+<div class=post-content>
+<p><em>go源码解析之TCP连接系列基于go源码1.16.5</em></p>
+<h2 id=连接关闭>连接关闭</h2>
+<p>上一章我们通过跟踪TCPConn的Write方法，了解了发送数据的过程以及fd的读写锁，本章将通过TCPConn的Close方法的跟踪来了解连接关闭的过程。</p>
+<h3 id=1-conn的close方法>1. conn的Close方法</h3>
+<p>从上一章了解到TCPConn继承自conn，它的Close方法就是conn的Close，代码如下：</p>
+<p>src/net/net.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (c *conn) Close() error {
+	...
+	err := c.fd.Close()
+	...
+	return err
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>同样conn的Close调用了netFD的Close方法：</p>
+<p>src/net/fd_posix.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *netFD) Close() error {
+	runtime.SetFinalizer(fd, nil)
+	return fd.pfd.Close()
+}
+</code></pre></td></tr></table>
+</div>
+</div><h3 id=2-回顾setfinalizer>2. 回顾SetFinalizer</h3>
+<p>回顾一下SetFinalizer，它设置参数一被回收时需要执行的清理方法，Close这里将fd的清理方法删除，我们再回顾一下fd的清理方法是在什么时候被设置的：</p>
+<p>src/net/fd_posix.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *netFD) setAddr(laddr, raddr Addr) {
+	fd.laddr = laddr
+	fd.raddr = raddr
+	runtime.SetFinalizer(fd, (*netFD).Close)
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>src/net/fd_unix.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *netFD) accept() (netfd *netFD, err error) {
+	d, rsa, errcall, err := fd.pfd.Accept()
+	...
+	if netfd, err = newFD(d, fd.family, fd.sotype, fd.net); err != nil {
+		poll.CloseFunc(d)
+		return nil, err
+	}
+	if err = netfd.init(); err != nil {
+		netfd.Close()
+		return nil, err
+	}
+	lsa, _ := syscall.Getsockname(netfd.pfd.Sysfd)
+	netfd.setAddr(netfd.addrFunc()(lsa), netfd.addrFunc()(rsa))
+	return netfd, nil
+}
+</code></pre></td></tr></table>
+</div>
+</div><p>可以看到在初始化netFD之后调用的setAddr方法中设置了清理方法。清理方法指定为netFD的Close。在Close方法中将清理方法删除，防止netFD被回收时重复执行Close。</p>
+<h3 id=3-pollfd的close方法>3. poll.FD的Close方法</h3>
+<p>src/internal/poll/fd_unix.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt> 1
+</span><span class=lnt> 2
+</span><span class=lnt> 3
+</span><span class=lnt> 4
+</span><span class=lnt> 5
+</span><span class=lnt> 6
+</span><span class=lnt> 7
+</span><span class=lnt> 8
+</span><span class=lnt> 9
+</span><span class=lnt>10
+</span><span class=lnt>11
+</span><span class=lnt>12
+</span><span class=lnt>13
+</span><span class=lnt>14
+</span><span class=lnt>15
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *FD) Close() error {
+	if !fd.fdmu.increfAndClose() {
+		return errClosing(fd.isFile)
+	}
+
+	fd.pd.evict()
+
+	err := fd.decref()
+
+	if fd.isBlocking == 0 {
+		runtime_Semacquire(&amp;fd.csema)
+	}
+
+	return err
+}
+</code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>increfAndClose方法将fd设置为关闭状态并唤醒其他所有等待锁的协程，在上一章有讲解。</li>
+<li>evict方法将阻塞等待io消息的协程唤醒，这块将在后续go语言实现io多路复用的章节详细讲解。</li>
+<li>decref与incref成对出现，如果fd的引用数量为0，将执行destory调用系统方法关闭fd</li>
+<li>runtime_Semacquire，如果fd是非阻塞模式，则需要请求信号量csema，等待destory方法完成并发送信号量后，再被唤醒</li>
+</ol>
+<p>destory方法：</p>
+<p>src/internal/poll/fd_unix.go</p>
+<div class=highlight><div class=chroma>
+<table class=lntable><tr><td class=lntd>
+<pre tabindex=0 class=chroma><code><span class=lnt>1
+</span><span class=lnt>2
+</span><span class=lnt>3
+</span><span class=lnt>4
+</span><span class=lnt>5
+</span><span class=lnt>6
+</span><span class=lnt>7
+</span><span class=lnt>8
+</span><span class=lnt>9
+</span></code></pre></td>
+<td class=lntd>
+<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *FD) destroy() error {
+	...
+
+	err := CloseFunc(fd.Sysfd)
+
+	fd.Sysfd = -1
+	runtime_Semrelease(&amp;fd.csema)
+	return err
+}
+</code></pre></td></tr></table>
+</div>
+</div><ol>
+<li>CloseFunc进行系统调用关闭fd</li>
+<li>runtime_Semrelease释放信号量csema</li>
+</ol>
+<h3 id=4-小结>4. 小结</h3>
+<p>关闭方法不会第一时间调用系统方法销毁系统fd，系统fd的销毁需要在不再有引用时执行。</p>
+</div>
+<div class=post-copyright>
+<p class=copyright-item>
+<span class=item-title>Author</span>
+<span class=item-content>刘玮</span>
+</p>
+<p class=copyright-item>
+<span class=item-title>LastMod</span>
+<span class=item-content>
+2022-02-12
+</span>
+</p>
+</div>
+<footer class=post-footer>
+<div class=post-tags>
+<a href=/tags/go/>Go</a>
+<a href=/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/>源码解析</a>
+<a href=/tags/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/>网络编程</a>
+</div>
+<nav class=post-nav>
+<a class=prev href=/post/go-tcp6/>
+<i class="iconfont icon-left"></i>
+<span class="prev-text nav-default">go源码解析之TCP连接（六）——IO多路复用之事件注册</span>
+<span class="prev-text nav-mobile">Prev</span>
+</a>
+<a class=next href=/post/go-tcp4/>
+<span class="next-text nav-default">go源码解析之TCP连接（四）——Write</span>
+<span class="next-text nav-mobile">Next</span>
+<i class="iconfont icon-right"></i>
+</a>
+</nav>
+</footer>
+</article>
+</div>
+</div>
+</main>
+<footer id=footer class=footer>
+<div class=social-links>
+<a href=mailto:skyscar@126.com class="iconfont icon-email" title=email></a>
+<a href=https://github.com/erberry class="iconfont icon-github" title=github></a>
+<a href=https://www.zhihu.com/people/liu-wei-54-20 class="iconfont icon-zhihu" title=zhihu></a>
+<a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&action=getalbum&album_id=2008233094889144321&scene=173&subscene=0&sessionid=1644638615&enterid=1644638666&from_msgid=2247484265&from_itemidx=1&count=3&nolastread=1#wechat_redirect" class="iconfont icon-wechat" title=wechat></a>
+<a href=https://erberry.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a>
+</div>
+<div class=copyright>
+<span class=power-by>
+Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a>
+</span>
+<span class=division>|</span>
+<span class=theme-info>
+Theme -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a>
+</span>
+<div class=busuanzi-footer>
+<span id=busuanzi_container_site_pv> site pv: <span id=busuanzi_value_site_pv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+<span class=division>|</span>
+<span id=busuanzi_container_site_uv> site uv: <span id=busuanzi_value_site_uv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+</div>
+<span class=copyright-year>
+&copy;
+2022<span class=heart><i class="iconfont icon-heart"></i></span><span>刘玮</span>
+</span>
+</div>
+</footer>
+<div class=back-to-top id=back-to-top>
+<i class="iconfont icon-up"></i>
+</div>
+</div>
+<script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
+<script type=text/javascript src=/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js></script>
+<script type=application/javascript>var doNotTrack=!1;doNotTrack||(window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga('create','UA-191525181-1','auto'),ga('set','anonymizeIp',!0),ga('send','pageview'))</script>
+<script async src=https://www.google-analytics.com/analytics.js></script>
+</body>
+</html>

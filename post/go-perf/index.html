@@ -1,0 +1,549 @@
+<!doctype html><html lang=en>
+<head>
+<meta charset=utf-8>
+<meta http-equiv=x-ua-compatible content="IE=edge,chrome=1">
+<title>最接地气的Go服务优化指南 - 刘玮的博客</title>
+<meta name=renderer content="webkit">
+<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
+<meta http-equiv=cache-control content="no-transform">
+<meta http-equiv=cache-control content="no-siteapp">
+<meta name=theme-color content="#f8f5ec">
+<meta name=msapplication-navbutton-color content="#f8f5ec">
+<meta name=apple-mobile-web-app-capable content="yes">
+<meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec">
+<meta name=author content="刘玮"><meta name=description content="最接地气的Go服务优化指南"><meta name=keywords content="Go,performance optimization,性能优化">
+<meta name=generator content="Hugo 0.92.1 with theme even">
+<link rel=canonical href=https://erberry.github.io/post/go-perf/>
+<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
+<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
+<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
+<link rel=manifest href=/manifest.json>
+<link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5>
+<script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
+<link href=/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css rel=stylesheet>
+<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous>
+<meta property="og:title" content="最接地气的Go服务优化指南">
+<meta property="og:description" content="最接地气的Go服务优化指南">
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://erberry.github.io/post/go-perf/"><meta property="article:section" content="post">
+<meta property="article:published_time" content="2022-02-12T20:10:05+08:00">
+<meta property="article:modified_time" content="2022-02-12T20:10:05+08:00">
+<meta itemprop=name content="最接地气的Go服务优化指南">
+<meta itemprop=description content="最接地气的Go服务优化指南"><meta itemprop=datePublished content="2022-02-12T20:10:05+08:00">
+<meta itemprop=dateModified content="2022-02-12T20:10:05+08:00">
+<meta itemprop=wordCount content="3420">
+<meta itemprop=keywords content="Go,"><meta name=twitter:card content="summary">
+<meta name=twitter:title content="最接地气的Go服务优化指南">
+<meta name=twitter:description content="最接地气的Go服务优化指南"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
+<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]-->
+</head>
+<body>
+<div id=mobile-navbar class=mobile-navbar>
+<div class=mobile-header-logo>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<div class=mobile-navbar-icon>
+<span></span>
+<span></span>
+<span></span>
+</div>
+</div>
+<nav id=mobile-menu class="mobile-menu slideout-menu">
+<ul class=mobile-menu-list>
+<a href=/>
+<li class=mobile-menu-item>主页</li>
+</a><a href=/post/>
+<li class=mobile-menu-item>归档</li>
+</a><a href=/tags/>
+<li class=mobile-menu-item>标签</li>
+</a><a href=/categories/>
+<li class=mobile-menu-item>分类</li>
+</a><a href=/about/>
+<li class=mobile-menu-item>关于</li>
+</a>
+</ul>
+</nav>
+<div class=container id=mobile-panel>
+<header id=header class=header>
+<div class=logo-wrapper>
+<a href=/ class=logo>刘玮的博客</a>
+</div>
+<nav class=site-navbar>
+<ul id=menu class=menu>
+<li class=menu-item>
+<a class=menu-item-link href=/>主页</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/post/>归档</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/tags/>标签</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/categories/>分类</a>
+</li><li class=menu-item>
+<a class=menu-item-link href=/about/>关于</a>
+</li>
+</ul>
+</nav>
+</header>
+<main id=main class=main>
+<div class=content-wrapper>
+<div id=content class=content>
+<article class=post>
+<header class=post-header>
+<h1 class=post-title>最接地气的Go服务优化指南</h1>
+<div class=post-meta>
+<span class=post-time> 2022-02-12 </span>
+<div class=post-category>
+<a href=/categories/go/> Go </a>
+</div>
+<span id=busuanzi_container_page_pv class=more-meta> <span id=busuanzi_value_page_pv><img src=/img/spinner.svg alt=spinner.svg></span> times read </span>
+</div>
+</header>
+<div class=post-toc id=post-toc>
+<h2 class=post-toc-title>Contents</h2>
+<div class="post-toc-content always-active">
+<nav id=TableOfContents>
+<ul>
+<li>
+<ul>
+<li><a href=#一压测>一、压测</a>
+<ul>
+<li><a href=#1-单接口压测>1. 单接口压测</a></li>
+<li><a href=#2-全链路压测>2. 全链路压测</a></li>
+<li><a href=#3-benchmark>3. benchmark</a></li>
+</ul>
+</li>
+<li><a href=#二工具>二、工具</a>
+<ul>
+<li><a href=#1-benchmark同上>1. benchmark（同上）</a></li>
+<li><a href=#2-go-pprof>2. go pprof</a></li>
+<li><a href=#3-系统监控>3. 系统监控</a></li>
+<li><a href=#4-应用监控>4. 应用监控</a></li>
+</ul>
+</li>
+<li><a href=#三业务侧优化>三、业务侧优化</a>
+<ul>
+<li><a href=#1-缓存>1. 缓存</a></li>
+<li><a href=#2-mysql>2. mysql</a></li>
+<li><a href=#3-redis>3. redis</a></li>
+<li><a href=#4-业务逻辑>4. 业务逻辑</a></li>
+<li><a href=#5-扩容升配>5. 扩容升配</a></li>
+</ul>
+</li>
+<li><a href=#四架构优化>四、架构优化</a>
+<ul>
+<li><a href=#1-分布式>1. 分布式</a></li>
+<li><a href=#2-微服务>2. 微服务</a></li>
+<li><a href=#3-容器化>3. 容器化</a></li>
+</ul>
+</li>
+<li><a href=#五底层优化>五、底层优化</a>
+<ul>
+<li><a href=#1-网络>1. 网络</a></li>
+<li><a href=#2-内存>2. 内存</a></li>
+<li><a href=#3-锁>3. 锁</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+</nav>
+</div>
+</div>
+<div class=post-content>
+<p><img src=/11.jpg alt=11></p>
+<h2 id=一压测>一、压测</h2>
+<h3 id=1-单接口压测>1. 单接口压测</h3>
+<h4 id=固定qps压测>固定QPS压测</h4>
+<blockquote>
+<p>用于排查新功能对接口的影响</p>
+</blockquote>
+<h4 id=极限qps压测>极限QPS压测</h4>
+<blockquote>
+<p>用于摸排接口最大承载QPS</p>
+</blockquote>
+<h3 id=2-全链路压测>2. 全链路压测</h3>
+<h3 id=3-benchmark>3. benchmark</h3>
+<blockquote>
+<p>用于代码层面方法的压测，可观察不同实现版本的方法的性能及内存使用</p>
+</blockquote>
+<h2 id=二工具>二、工具</h2>
+<h3 id=1-benchmark同上>1. benchmark（同上）</h3>
+<h3 id=2-go-pprof>2. go pprof</h3>
+<ol>
+<li>cpu profile，用于排查cpu占用较高的代码逻辑</li>
+<li>memory profile，用于排查内存占用较高的代码逻辑</li>
+<li>goroutine profile，用于排查goroutine占用较高的代码逻辑（即goroutine都在执行哪些逻辑）</li>
+<li>block profile，用于排查阻塞运行的代码逻辑，例如大锁（mutex锁定了一个运行时间较长的逻辑，且有很多其他goroutine在等待这个锁）</li>
+</ol>
+<h3 id=3-系统监控>3. 系统监控</h3>
+<ul>
+<li>
+<p>cpu</p>
+<blockquote>
+<p>以固定速率增加压测qps，若cpu占用增长慢，接口延迟增长很快，可观察profile中的goroutine profile 和block profile，查看阻塞了运行的代码逻辑；若cpu占用增长快，可观察profile中的cpu profile，查看占用 cpu高的代码逻辑。</p>
+</blockquote>
+</li>
+<li>
+<p>memory</p>
+<blockquote>
+<p>内存占用高，不止影响内存使用，还会影响gc，使得gc时间增加</p>
+</blockquote>
+<blockquote>
+<p>go进程中的内存占用除了运行时变量内存占用，还有goroutine内存占用。goroutine内存占用可以使用goroutine池限制并发goroutine数量，变量内存占用可观察memory profile，查看内存占用高的代码逻辑并进行优化</p>
+</blockquote>
+</li>
+<li>
+<p>磁盘io</p>
+<blockquote>
+<p>应用中与磁盘io性能相关的一般只有打印日志，可增加一个日志buffer，避免对磁盘的频繁写入。也可以开启日志采样。</p>
+</blockquote>
+</li>
+<li>
+<p>网络io</p>
+<blockquote>
+<p>系统网络指标一般只有总的流量，qps的增加必然伴随流量上升。如果压测qps增加，cpu不高，一般可以检查依赖的下游其他服务（也包括db和redis）接口rt是否上升。</p>
+</blockquote>
+<blockquote>
+<p>针对io密集的服务，可以通过并发执行io请求，和使用批量io接口减少网络rtt带来的接口延迟。</p>
+</blockquote>
+</li>
+</ul>
+<h3 id=4-应用监控>4. 应用监控</h3>
+<ul>
+<li>
+<p>goroutine数量</p>
+<blockquote>
+<p>goroutine虽然已经足够轻量，但是并发goroutine太多，goroutine创建占用cpu、内存占用、调度带来的消耗都会体现出来。必要时可以使用goroutine池来限制最大并发数。</p>
+</blockquote>
+</li>
+<li>
+<p>接口qps、rt</p>
+<blockquote>
+<p>接口qps和rt是服务性能的基础指标，可针对重要接口的qps和rt进行报警监控。</p>
+</blockquote>
+</li>
+<li>
+<p>go pprof</p>
+<blockquote>
+<p>go pprof是go程序性能分析的重要工具</p>
+</blockquote>
+</li>
+<li>
+<p>应用日志</p>
+<blockquote>
+<p>应用日志也是服务监控的重要手段，合理的日志分级和报警策略可以帮助我们更早得发现性能问题。</p>
+</blockquote>
+</li>
+</ul>
+<h2 id=三业务侧优化>三、业务侧优化</h2>
+<h3 id=1-缓存>1. 缓存</h3>
+<ul>
+<li>
+<p>端上缓存</p>
+<blockquote>
+<p>将数据缓存到客户端或者浏览器</p>
+</blockquote>
+<blockquote>
+<p>例如一些常用但不常变动的配置性数据端上可以在启动app时请求一次缓存到本地；针对一些高用户参与度的活动，可以将一些数据预埋到端上。</p>
+</blockquote>
+</li>
+<li>
+<p>cdn缓存</p>
+<blockquote>
+<p>将一些完全静态的数据缓存到cdn；针对一些高流量接口，可以进行静态、动态数据分离，把静态数据缓存到cdn，动态数据通过另一个接口获取。</p>
+</blockquote>
+</li>
+<li>
+<p>内存数据库缓存</p>
+<blockquote>
+<p>如常用的redis、memcache等，是mysql此类db不能满足性能需求下的产物。应该避免直接查询db，充分利用内存数据库。</p>
+</blockquote>
+</li>
+<li>
+<p>内存缓存</p>
+<blockquote>
+<p>有些接口对性能要求极高，可以将此类接口的静态数据缓存到内存，例如首屏或者首页数据；一些常用但不常变动的配置性数据也可以缓存到内存。</p>
+</blockquote>
+<blockquote>
+<p>进行内存缓存需要关注服务的内存占用，关注增加的额外gc压力，甚至是OOM。</p>
+</blockquote>
+</li>
+</ul>
+<h3 id=2-mysql>2. mysql</h3>
+<ul>
+<li>
+<p>索引优化</p>
+<blockquote>
+<p>创建合理的索引，关注sql的执行计划。</p>
+</blockquote>
+<blockquote>
+<p>一般禁止全表扫描。</p>
+</blockquote>
+<blockquote>
+<p>合理利用索引覆盖、索引下推等特性，尽量避免回表。</p>
+</blockquote>
+<blockquote>
+<p>有排序需要，尽可能利用索引的有序性，避免file sort。</p>
+</blockquote>
+<blockquote>
+<p>关注分页，offset越大，性能越差。</p>
+</blockquote>
+<blockquote>
+<p>联表查询，小表驱动大表，连接字段要有索引。</p>
+</blockquote>
+</li>
+<li>
+<p>分库分表</p>
+<blockquote>
+<p>水平分表一般在单表记录数超大时使用，可以大大较少单表的记录数，达到降低索引B+树高度，减少查询扫描区间的io次数。</p>
+</blockquote>
+<blockquote>
+<p>垂直分表一般在单条记录占用空间很大时使用，可以减小单表单条记录大小，从而增加聚簇索引页容纳的记录数量，一方面减少了聚簇索引使用的页数量，另一方面也降低了聚簇索引B+树高度，都可以减少查询io次数。</p>
+</blockquote>
+<blockquote>
+<p>分库，利用硬件性能的扩展提升数据库性能。</p>
+</blockquote>
+</li>
+<li>
+<p>合并更新</p>
+<blockquote>
+<p>针对频繁更新的字段，进行合并更新</p>
+</blockquote>
+<blockquote>
+<p>例如动态的浏览数字段，可以将浏览行为放到队列中，对于相同动态的浏览数变化，合并成一条sql语句进行更新</p>
+</blockquote>
+</li>
+</ul>
+<h3 id=3-redis>3. redis</h3>
+<ul>
+<li>
+<p>避免大key、大value</p>
+<blockquote>
+<p>使用cluster模式的redis时，可以将数据量很大的key拆分到多个实例（例如通过hash），避免出现热点实例；热点key也可以拆分到多个实例，分散压力。</p>
+</blockquote>
+</li>
+<li>
+<p>关注单个命令耗时</p>
+<blockquote>
+<p>由于redis单线程模型，单个命令执行时间过长会导致其他命令被阻塞，严重拖慢整个应用的运行。例如批量zadd，hmset等命令不宜一次性添加过多数据；删除一个大key时，可以使用unlink代替del（unlink会异步在另一个线程中执行删除）</p>
+</blockquote>
+</li>
+<li>
+<p>使用cluster模式</p>
+<blockquote>
+<p>由于redis单线程模型，单实例模式下提高机器cpu数量不能带来性能提升。使用cluster模式也更容易扩容。</p>
+</blockquote>
+</li>
+</ul>
+<h3 id=4-业务逻辑>4. 业务逻辑</h3>
+<ul>
+<li>
+<p>使用缓存</p>
+<blockquote>
+<p>前面已经介绍过缓存，在性能要求高且一致性要求不严格的业务逻辑中尽可能使用缓存</p>
+</blockquote>
+</li>
+<li>
+<p>精简接口</p>
+<blockquote>
+<p>合理设计接口，避免大量数据一个接口返回，需要客户端分模块渲染展示。</p>
+</blockquote>
+<blockquote>
+<p>接口分版本，防止新老版本使用同一个接口，不需要的数据越来越多。</p>
+</blockquote>
+</li>
+<li>
+<p>异步处理</p>
+<blockquote>
+<p>将逻辑较重且没必要同步处理的逻辑改为异步处理，减小接口rt</p>
+</blockquote>
+<blockquote>
+<p>可通过启动goroutine来处理，若对数据一致性要求较高，可使用mq</p>
+</blockquote>
+</li>
+<li>
+<p>并发处理</p>
+<blockquote>
+<p>查询接口中若有较多的io类方法调用，可将无依赖关系的io类方法进行并发调用，降低接口rt</p>
+</blockquote>
+<blockquote>
+<p>启动多个goroutine与其他语言多线程一样，也同样有线程安全问题，尤其是在闭包引用外部变量时，很容易多个goroutine共享相同的变量，出现线程安全问题。（如果对共享变量没有写操作，不会有问题，但是如果调用链比较长，很难确定下层是否有写操作）</p>
+</blockquote>
+<blockquote>
+<p>可通过传参避免多goroutine通过闭包共享变量；如果共享变量是slice或者map，即使传参，它们底层数据也是共享的，进行写操作同样有线程安全问题，可通过深度拷贝，复制变量给不同的goroutine使用。</p>
+</blockquote>
+</li>
+<li>
+<p>批量请求</p>
+<blockquote>
+<p>将单次查询接口改造为批量查询接口。降低网络rtt带来的延迟。</p>
+</blockquote>
+<blockquote>
+<p>例如将循环调用单个查询用户信息接口改为一次调用批量查询用户信息接口。</p>
+</blockquote>
+</li>
+<li>
+<p>动态、静态数据分离</p>
+<blockquote>
+<p>动、静态数据分离是为了更容易对静态数据进行缓存</p>
+</blockquote>
+<blockquote>
+<p>例如，将动态列表中当前登陆用户的互动数据（是否点赞、是否关注等）与动态本身数据进行分离</p>
+</blockquote>
+</li>
+<li>
+<p>优化算法</p>
+</li>
+<li>
+<p>熔断、降级</p>
+</li>
+</ul>
+<h3 id=5-扩容升配>5. 扩容升配</h3>
+<blockquote>
+<p>扩容升配是应对突发流量的临时有效解决方案</p>
+</blockquote>
+<blockquote>
+<p>扩容升配需要针对当前性能瓶颈才能到达更高的性价比</p>
+</blockquote>
+<h2 id=四架构优化>四、架构优化</h2>
+<h3 id=1-分布式>1. 分布式</h3>
+<blockquote>
+<p>分布式的系统架构本身就是为了达到高可用、高性能的目的。</p>
+</blockquote>
+<blockquote>
+<p>尽量避免单点服务的存在。</p>
+</blockquote>
+<h3 id=2-微服务>2. 微服务</h3>
+<blockquote>
+<p>从单体服务中将相对独立的业务模块拆分到若干微服务，一方面降低了某个业务模块故障对服务整体的影响；另一方面微服务拆分过程也是资源拆分、细化的过程，可以使得资源的分配更优。</p>
+</blockquote>
+<h3 id=3-容器化>3. 容器化</h3>
+<h2 id=五底层优化>五、底层优化</h2>
+<h3 id=1-网络>1. 网络</h3>
+<ul>
+<li>连接复用</li>
+</ul>
+<blockquote>
+<p>尽量使用长连接来进行通信，如grpc。http协议也可以通过设置keepalive达到连接复用的效果，可以避免频繁创建连接带来的性能消耗</p>
+</blockquote>
+<ul>
+<li>编解码</li>
+</ul>
+<blockquote>
+<p>网络协议必然涉及数据编解码，编解码算法对服务整体性能的影响很大。例如web服务中常用的json编解码，go1.13之前一般使用jsoniter包代替标准包，go1.13已经对标准包进行了优化。</p>
+</blockquote>
+<ul>
+<li>数据压缩</li>
+</ul>
+<blockquote>
+<p>可以通过压缩减小数据体积，减少传输时间</p>
+</blockquote>
+<ul>
+<li>IO多路复用</li>
+</ul>
+<blockquote>
+<p>使用系统提供的IO多路复用方法，如epoll，作为网络底层，提高网络io操作效率。</p>
+</blockquote>
+<blockquote>
+<p>在特定的场景需要自己实现网络底层来达到更优的性能。例如网关，单个服务一般要承载10w+的长连接，如果使用go原有的网络库，每个连接创建一个goroutine来处理io，大量的goroutine将成为系统瓶颈。</p>
+</blockquote>
+<h3 id=2-内存>2. 内存</h3>
+<ul>
+<li>预分配</li>
+</ul>
+<blockquote>
+<p>预分配内存可以减少频繁内存分配带来的性能消耗。例如在append slice之前，预先将slice make到一个指定大小。</p>
+</blockquote>
+<ul>
+<li>池化、复用</li>
+</ul>
+<blockquote>
+<p>对于频繁创建、销毁的内存对象，可以建立对象池进行对象复用。例如http中的Request对象，或者网络底层用于读取数据和拆分、拼接数据包的byte数组。</p>
+</blockquote>
+<ul>
+<li>堆、栈</li>
+</ul>
+<blockquote>
+<p>了解go内存逃逸分析，有助于区分堆内存和栈内存，减少堆内存的分配可以降低内存分配带来的消耗，也可以降低gc压力。</p>
+</blockquote>
+<h3 id=3-锁>3. 锁</h3>
+<blockquote>
+<p>锁粒度拆分尽量小，避免锁定一个超长执行时间的逻辑。</p>
+</blockquote>
+<blockquote>
+<p>可以使用原子操作（atomic包）代替锁的，尽量使用原子操作。</p>
+</blockquote>
+</div>
+<div class=post-copyright>
+<p class=copyright-item>
+<span class=item-title>Author</span>
+<span class=item-content>刘玮</span>
+</p>
+<p class=copyright-item>
+<span class=item-title>LastMod</span>
+<span class=item-content>
+2022-02-12
+</span>
+</p>
+</div>
+<footer class=post-footer>
+<div class=post-tags>
+<a href=/tags/go/>Go</a>
+</div>
+<nav class=post-nav>
+<a class=prev href=/post/go-hang-panic/>
+<i class="iconfont icon-left"></i>
+<span class="prev-text nav-default">记一次goroutine被hang的排查经历</span>
+<span class="prev-text nav-mobile">Prev</span>
+</a>
+<a class=next href=/post/go-callvis/>
+<span class="next-text nav-default">Go代码调用链路可视化工具—go-callvis</span>
+<span class="next-text nav-mobile">Next</span>
+<i class="iconfont icon-right"></i>
+</a>
+</nav>
+</footer>
+</article>
+</div>
+</div>
+</main>
+<footer id=footer class=footer>
+<div class=social-links>
+<a href=mailto:skyscar@126.com class="iconfont icon-email" title=email></a>
+<a href=https://github.com/erberry class="iconfont icon-github" title=github></a>
+<a href=https://www.zhihu.com/people/liu-wei-54-20 class="iconfont icon-zhihu" title=zhihu></a>
+<a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&action=getalbum&album_id=2008233094889144321&scene=173&subscene=0&sessionid=1644638615&enterid=1644638666&from_msgid=2247484265&from_itemidx=1&count=3&nolastread=1#wechat_redirect" class="iconfont icon-wechat" title=wechat></a>
+<a href=https://erberry.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a>
+</div>
+<div class=copyright>
+<span class=power-by>
+Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a>
+</span>
+<span class=division>|</span>
+<span class=theme-info>
+Theme -
+<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a>
+</span>
+<div class=busuanzi-footer>
+<span id=busuanzi_container_site_pv> site pv: <span id=busuanzi_value_site_pv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+<span class=division>|</span>
+<span id=busuanzi_container_site_uv> site uv: <span id=busuanzi_value_site_uv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
+</div>
+<span class=copyright-year>
+&copy;
+2022<span class=heart><i class="iconfont icon-heart"></i></span><span>刘玮</span>
+</span>
+</div>
+</footer>
+<div class=back-to-top id=back-to-top>
+<i class="iconfont icon-up"></i>
+</div>
+</div>
+<script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
+<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
+<script type=text/javascript src=/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js></script>
+<script type=application/javascript>var doNotTrack=!1;doNotTrack||(window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga('create','UA-191525181-1','auto'),ga('set','anonymizeIp',!0),ga('send','pageview'))</script>
+<script async src=https://www.google-analytics.com/analytics.js></script>
+</body>
+</html>
