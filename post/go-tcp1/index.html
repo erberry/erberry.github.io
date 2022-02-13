@@ -1,145 +1,187 @@
-<!doctype html><html lang=en>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset=utf-8>
-<meta http-equiv=x-ua-compatible content="IE=edge,chrome=1">
-<title>go源码解析之TCP连接（一）——Listen - 刘玮的博客</title>
-<meta name=renderer content="webkit">
-<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta http-equiv=cache-control content="no-transform">
-<meta http-equiv=cache-control content="no-siteapp">
-<meta name=theme-color content="#f8f5ec">
-<meta name=msapplication-navbutton-color content="#f8f5ec">
-<meta name=apple-mobile-web-app-capable content="yes">
-<meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec">
-<meta name=author content="刘玮"><meta name=description content="go源码解析之TCP连接"><meta name=keywords content="Go,源码解析,网络编程">
-<meta name=generator content="Hugo 0.92.1 with theme even">
-<link rel=canonical href=https://erberry.github.io/post/go-tcp1/>
-<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
-<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
-<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
-<link rel=manifest href=/manifest.json>
-<link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5>
-<script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
-<link href=/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css rel=stylesheet>
-<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous>
-<meta property="og:title" content="go源码解析之TCP连接（一）——Listen">
-<meta property="og:description" content="go源码解析之TCP连接">
-<meta property="og:type" content="article">
-<meta property="og:url" content="https://erberry.github.io/post/go-tcp1/"><meta property="article:section" content="post">
-<meta property="article:published_time" content="2022-02-12T19:57:05+08:00">
-<meta property="article:modified_time" content="2022-02-12T19:57:05+08:00">
-<meta itemprop=name content="go源码解析之TCP连接（一）——Listen">
-<meta itemprop=description content="go源码解析之TCP连接"><meta itemprop=datePublished content="2022-02-12T19:57:05+08:00">
-<meta itemprop=dateModified content="2022-02-12T19:57:05+08:00">
-<meta itemprop=wordCount content="5563">
-<meta itemprop=keywords content="Go,源码解析,网络编程,"><meta name=twitter:card content="summary">
-<meta name=twitter:title content="go源码解析之TCP连接（一）——Listen">
-<meta name=twitter:description content="go源码解析之TCP连接"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
-<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]-->
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>go源码解析之TCP连接（一）——Listen - 刘玮的博客</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="刘玮" /><meta name="description" content="go源码解析之TCP连接" /><meta name="keywords" content="Go, 源码解析, 网络编程" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.92.1 with theme even" />
+
+
+<link rel="canonical" href="https://erberry.github.io/post/go-tcp1/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<link href="/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="go源码解析之TCP连接（一）——Listen" />
+<meta property="og:description" content="go源码解析之TCP连接" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://erberry.github.io/post/go-tcp1/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-12T19:57:05+08:00" />
+<meta property="article:modified_time" content="2022-02-12T19:57:05+08:00" />
+
+<meta itemprop="name" content="go源码解析之TCP连接（一）——Listen">
+<meta itemprop="description" content="go源码解析之TCP连接"><meta itemprop="datePublished" content="2022-02-12T19:57:05+08:00" />
+<meta itemprop="dateModified" content="2022-02-12T19:57:05+08:00" />
+<meta itemprop="wordCount" content="5563">
+<meta itemprop="keywords" content="Go,源码解析,网络编程," /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="go源码解析之TCP连接（一）——Listen"/>
+<meta name="twitter:description" content="go源码解析之TCP连接"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
 </head>
 <body>
-<div id=mobile-navbar class=mobile-navbar>
-<div class=mobile-header-logo>
-<a href=/ class=logo>刘玮的博客</a>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">刘玮的博客</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
 </div>
-<div class=mobile-navbar-icon>
-<span></span>
-<span></span>
-<span></span>
-</div>
-</div>
-<nav id=mobile-menu class="mobile-menu slideout-menu">
-<ul class=mobile-menu-list>
-<a href=/>
-<li class=mobile-menu-item>主页</li>
-</a><a href=/post/>
-<li class=mobile-menu-item>归档</li>
-</a><a href=/tags/>
-<li class=mobile-menu-item>标签</li>
-</a><a href=/categories/>
-<li class=mobile-menu-item>分类</li>
-</a><a href=/about/>
-<li class=mobile-menu-item>关于</li>
-</a>
-</ul>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">归档</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">标签</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">分类</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
 </nav>
-<div class=container id=mobile-panel>
-<header id=header class=header>
-<div class=logo-wrapper>
-<a href=/ class=logo>刘玮的博客</a>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">刘玮的博客</a>
 </div>
-<nav class=site-navbar>
-<ul id=menu class=menu>
-<li class=menu-item>
-<a class=menu-item-link href=/>主页</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/post/>归档</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/tags/>标签</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/categories/>分类</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/about/>关于</a>
-</li>
-</ul>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">归档</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">标签</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">分类</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
 </nav>
-</header>
-<main id=main class=main>
-<div class=content-wrapper>
-<div id=content class=content>
-<article class=post>
-<header class=post-header>
-<h1 class=post-title>go源码解析之TCP连接（一）——Listen</h1>
-<div class=post-meta>
-<span class=post-time> 2022-02-12 </span>
-<div class=post-category>
-<a href=/categories/go/> Go </a>
-</div>
-<span id=busuanzi_container_page_pv class=more-meta> <span id=busuanzi_value_page_pv><img src=/img/spinner.svg alt=spinner.svg></span> times read </span>
-</div>
-</header>
-<div class=post-toc id=post-toc>
-<h2 class=post-toc-title>Contents</h2>
-<div class="post-toc-content always-active">
-<nav id=TableOfContents>
-<ul>
-<li><a href=#端口是如何监听的>端口是如何监听的</a>
-<ul>
-<li><a href=#1-netlisten>1. net.Listen</a></li>
-<li><a href=#2listenconfig的listen方法>2.ListenConfig的Listen方法</a></li>
-<li><a href=#syslistenerlistentcp>sysListener.listenTCP</a></li>
-<li><a href=#socket>socket</a></li>
-<li><a href=#中场小结>中场小结</a></li>
-<li><a href=#syssocket>sysSocket</a></li>
-<li><a href=#setdefaultsockopts>setDefaultSockopts</a></li>
-<li><a href=#newfd>newFD</a></li>
-<li><a href=#fdlistenstream>fd.listenStream</a></li>
-</ul>
-</li>
-</ul>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">go源码解析之TCP连接（一）——Listen</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-12 </span>
+        <div class="post-category">
+            <a href="/categories/go/"> Go </a>
+            </div>
+        <span id="busuanzi_container_page_pv" class="more-meta"> <span id="busuanzi_value_page_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> times read </span>
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li><a href="#端口是如何监听的">端口是如何监听的</a>
+      <ul>
+        <li><a href="#1-netlisten">1. net.Listen</a></li>
+        <li><a href="#2listenconfig的listen方法">2.ListenConfig的Listen方法</a></li>
+        <li><a href="#syslistenerlistentcp">sysListener.listenTCP</a></li>
+        <li><a href="#socket">socket</a></li>
+        <li><a href="#中场小结">中场小结</a></li>
+        <li><a href="#syssocket">sysSocket</a></li>
+        <li><a href="#setdefaultsockopts">setDefaultSockopts</a></li>
+        <li><a href="#newfd">newFD</a></li>
+        <li><a href="#fdlistenstream">fd.listenStream</a></li>
+      </ul>
+    </li>
+  </ul>
 </nav>
+  </div>
 </div>
-</div>
-<div class=post-content>
-<p><em>go源码解析之TCP连接系列基于go源码1.16.5</em></p>
-<h1 id=端口是如何监听的>端口是如何监听的</h1>
+    <div class="post-content">
+      <p><em>go源码解析之TCP连接系列基于go源码1.16.5</em></p>
+<h1 id="端口是如何监听的">端口是如何监听的</h1>
 <p>首先奉上net文档中第一个映入眼帘的example</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>ln, err := net.Listen(&#34;tcp&#34;, &#34;:8080&#34;)
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">ln, err := net.Listen(&#34;tcp&#34;, &#34;:8080&#34;)
 if err != nil {
         // handle error
 }
@@ -153,17 +195,17 @@ for {
 </code></pre></td></tr></table>
 </div>
 </div><p><strong>下面我们通过逐行跟踪源码，来看开启监听的过程：</strong></p>
-<h2 id=1-netlisten>1. net.Listen</h2>
+<h2 id="1-netlisten">1. net.Listen</h2>
 <p>src\net\dial.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func Listen(network, address string) (Listener, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func Listen(network, address string) (Listener, error) {
     var lc ListenConfig
     return lc.Listen(context.Background(), network, address)
 }
@@ -172,15 +214,15 @@ for {
 </div><p>这个监听方法，其中network可以是tcp、tcp4、tcp6、unix、unixpacket，我们通常传入tcp即代表监听tcp连接，包括ipv4和ipv6，其他类型不在我们的介绍范围，包括udp本文也不讨论。address是监听的地址，ip:port格式，如果不指定port，将由系统自动分配一个端口。</p>
 <p>ListenConfig的struct体如下：
 src\net\dial.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type ListenConfig struct {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">type ListenConfig struct {
     Control func(network, address string, c syscall.RawConn) error
     KeepAlive time.Duration
 }
@@ -188,31 +230,31 @@ src\net\dial.go</p>
 </div>
 </div><p>其中Control是一个方法变量，根据注释，这个方法会在连接创建之后并将连接绑定到操作系统之前调用，相当于是提供给用户层的一个连接创建的回调方法，至于它的用处和调用时机，随着后续更深层的代码分析再做进一步介绍。
 KeepAlive，应该和内核参数/proc/sys/net/ipv4/tcp_keepalive_time、tcp_keepalive_intvl、tcp_keepalive_probes是相同的作用，但是根据注释说明，0是开启，负数是关闭，没有说明正数的作用。后续用到再研究。</p>
-<h2 id=2listenconfig的listen方法>2.ListenConfig的Listen方法</h2>
+<h2 id="2listenconfig的listen方法">2.ListenConfig的Listen方法</h2>
 <p>src\net\dial.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
-</span><span class=lnt>17
-</span><span class=lnt>18
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (lc *ListenConfig) Listen(ctx context.Context, network, address string) (Listener, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (lc *ListenConfig) Listen(ctx context.Context, network, address string) (Listener, error) {
 	addrs, err := DefaultResolver.resolveAddrList(ctx, &#34;listen&#34;, network, address, nil)
 	...
         sl := &amp;sysListener{
@@ -232,19 +274,19 @@ KeepAlive，应该和内核参数/proc/sys/net/ipv4/tcp_keepalive_time、tcp_kee
 }
 </code></pre></td></tr></table>
 </div>
-</div><p><em>其中&mldr;代表省略的一些细节处理或者是无关分支，后续也都会以这种方式贴代码。</em></p>
+</div><p><em>其中&hellip;代表省略的一些细节处理或者是无关分支，后续也都会以这种方式贴代码。</em></p>
 <p>ListenConfig的Listen方法同样是传入了network和address，ctx是上层传入的context.Background()。返回值是Listener类型和error，其中的Listener其实是一个接口类型，具体接口定义如下：
 src\net\net.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type Listener interface {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">type Listener interface {
 	Accept() (Conn, error) //等待并返回建立成功的连接
 	Close() error //关闭监听
 	Addr() Addr //监听地址
@@ -252,21 +294,21 @@ src\net\net.go</p>
 </code></pre></td></tr></table>
 </div>
 </div><p>我们再看ListenConfig的Listen方法的逻辑，第一行对传入的地址进行了解析，转换成了下层可用的地址格式。紧接着生成了一个sysListener的变量，sysListener的作用很简单，它的存在就是为了构造各种类型的实现了Listener接口的监听器，因此它的所有的方法都是listenXXX，XXX则代表网络协议类型，例如这里的listenTCP，还有listenUDP等等。</p>
-<h2 id=syslistenerlistentcp>sysListener.listenTCP</h2>
+<h2 id="syslistenerlistentcp">sysListener.listenTCP</h2>
 <p>继续看代码，下面的switch case我们不管，直接看case是TCPAddr的情况，调用了sysListener的listenTCP方法，方法中代码如下：</p>
 <p>src\net\tcpsock_posix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (sl *sysListener) listenTCP(ctx context.Context, laddr *TCPAddr) (*TCPListener, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (sl *sysListener) listenTCP(ctx context.Context, laddr *TCPAddr) (*TCPListener, error) {
 	fd, err := internetSocket(ctx, sl.network, laddr, nil, syscall.SOCK_STREAM, 0, &#34;listen&#34;, sl.ListenConfig.Control)
 	if err != nil {
 		return nil, err
@@ -277,18 +319,18 @@ src\net\net.go</p>
 </div>
 </div><p>可见sysListener构造了一个TCPListener并返回，看一下internetSocket，internetSocket的作用是创建一个socket，TCPListener将使用这个socket来监听端口接收连接，下面看具体代码：</p>
 <p>src\net\ipsock_posix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func internetSocket(ctx context.Context, net string, laddr, raddr sockaddr, sotype, proto int, mode string, ctrlFn func(string, string, syscall.RawConn) error) (fd *netFD, err error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func internetSocket(ctx context.Context, net string, laddr, raddr sockaddr, sotype, proto int, mode string, ctrlFn func(string, string, syscall.RawConn) error) (fd *netFD, err error) {
 	if (runtime.GOOS == &#34;aix&#34; || runtime.GOOS == &#34;windows&#34; || runtime.GOOS == &#34;openbsd&#34;) &amp;&amp; mode == &#34;dial&#34; &amp;&amp; raddr.isWildcard() {
 		raddr = raddr.toLocal(net)
 	}
@@ -309,43 +351,43 @@ src\net\net.go</p>
 <li>参数8，ctrlFn，这里就是上面ListenConfig的Controller属性</li>
 </ol>
 <p>方法的第一部分还是地址转换，第二部分的favoriteAddrFamily方法则是返回了支持的协议簇（AF_INET或者AF_INET6，代表了ipv4和ipv6），第三部分则是socket方法的调用，它的入参和internetSocket的基本一致，返回值是*netFD，而netFD则是对系统文件描述符（socket也有一个唯一的文件描述符fd与之对应）的包装，下面我们看下socket方法中是怎么创建netFD的：</p>
-<h2 id=socket>socket</h2>
+<h2 id="socket">socket</h2>
 <p>src\net\sock_posix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
-</span><span class=lnt>17
-</span><span class=lnt>18
-</span><span class=lnt>19
-</span><span class=lnt>20
-</span><span class=lnt>21
-</span><span class=lnt>22
-</span><span class=lnt>23
-</span><span class=lnt>24
-</span><span class=lnt>25
-</span><span class=lnt>26
-</span><span class=lnt>27
-</span><span class=lnt>28
-</span><span class=lnt>29
-</span><span class=lnt>30
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
+</span><span class="lnt">25
+</span><span class="lnt">26
+</span><span class="lnt">27
+</span><span class="lnt">28
+</span><span class="lnt">29
+</span><span class="lnt">30
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func socket(ctx context.Context, net string, family, sotype, proto int, ipv6only bool, laddr, raddr sockaddr, ctrlFn func(string, string, syscall.RawConn) error) (fd *netFD, err error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func socket(ctx context.Context, net string, family, sotype, proto int, ipv6only bool, laddr, raddr sockaddr, ctrlFn func(string, string, syscall.RawConn) error) (fd *netFD, err error) {
 	s, err := sysSocket(family, sotype, proto)
 	if err != nil {
 		return nil, err
@@ -382,23 +424,23 @@ src\net\net.go</p>
 <li>sysSocket，顾名思义，它的作用是创建系统socket</li>
 <li>setDefaultSockopts，设置了socket的一些属性，例如是否只支持ipv6</li>
 <li>newFD，对返回的系统fd进行了包装，生成了本方法要返回的netFD</li>
-<li>if laddr != nil && raddr == nil，如果传入了本地地址，没有传入远端地址，则认为新的socket是用来监听的，调用了netFD的listenStream进行端口绑定，可以看到这里将ctrlFn（ListenConfig的Controller属性）又一次传入，那么ListenConfig的Controller方法属性是在socket创建之后执行的，具体在什么操作之前，还需要进一步跟代码。</li>
+<li>if laddr != nil &amp;&amp; raddr == nil，如果传入了本地地址，没有传入远端地址，则认为新的socket是用来监听的，调用了netFD的listenStream进行端口绑定，可以看到这里将ctrlFn（ListenConfig的Controller属性）又一次传入，那么ListenConfig的Controller方法属性是在socket创建之后执行的，具体在什么操作之前，还需要进一步跟代码。</li>
 <li>fd.dial，是传入了远端地址的情况，则认为新的socket是用来connect的，dial进行了连接。</li>
 </ol>
 <p>一个tcp的监听socket创建完成、进行了端口绑定，并将此socket的fd包装成了netFD返回给调用者，沿着调用链一直向上返回到sysListener的listenTCP方法，为方便大家查看，将上面贴过的代码再次贴到这里：</p>
 <p>src\net\tcpsock_posix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (sl *sysListener) listenTCP(ctx context.Context, laddr *TCPAddr) (*TCPListener, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (sl *sysListener) listenTCP(ctx context.Context, laddr *TCPAddr) (*TCPListener, error) {
 	fd, err := internetSocket(ctx, sl.network, laddr, nil, syscall.SOCK_STREAM, 0, &#34;listen&#34;, sl.ListenConfig.Control)
 	if err != nil {
 		return nil, err
@@ -407,9 +449,9 @@ src\net\net.go</p>
 }
 </code></pre></td></tr></table>
 </div>
-</div><h2 id=中场小结>中场小结</h2>
+</div><h2 id="中场小结">中场小结</h2>
 <p>在继续深入sysSocket、setDefaultSockopts、newFD、listenStream几个方法之前，我们现在通过一张图来回顾一下前面的调用过程</p>
-<p><img src=/1.png alt=1></p>
+<p><img src="/1.png" alt="1"></p>
 <p>到此为止，整个逻辑除了最下层的socket方法中略显复杂，其他每个方法体都很小，但是调用链路还是比较长，我们来简单总结下每一层的代码设计。</p>
 <ol>
 <li>net.Listen是整个链路的入口方法，它创建了一个空的ListenConfig，并调用了ListenConfig的Listen方法</li>
@@ -422,21 +464,21 @@ src\net\net.go</p>
 <li>最终将TCPListener返回给net.Listen的调用者，调用者可以调用TCPListener的Accept方法开始接受连接请求，这一部分将在下一篇中介绍。</li>
 </ol>
 <p>下面继续介绍sysSocket、setDefaultSockopts、newFD、listenStream几个方法</p>
-<h2 id=syssocket>sysSocket</h2>
+<h2 id="syssocket">sysSocket</h2>
 <p>老套路，先祭出代码：</p>
 <p>src\net\sock_cloexec.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func sysSocket(family, sotype, proto int) (int, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func sysSocket(family, sotype, proto int) (int, error) {
 	s, err := socketFunc(family, sotype|syscall.SOCK_NONBLOCK|syscall.SOCK_CLOEXEC, proto)
 
 	...
@@ -456,20 +498,20 @@ src\net\net.go</p>
 </ol>
 <p>socketFunc是一个全局的方法变量，它的值如下：</p>
 <p>src\net\hook_unix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
-</span><span class=lnt>8
-</span><span class=lnt>9
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>var (
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">var (
 	...
 
 	// Placeholders for socket system calls.
@@ -483,18 +525,18 @@ src\net\net.go</p>
 </div><p>可见除了socketFunc之外，还有connectFunc、listenFunc、getsockoptIntFunc，它们都是syscall包里的方法。</p>
 <p>继续跟入syscall.Socket:</p>
 <p>src\syscall\syscall_unix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func Socket(domain, typ, proto int) (fd int, err error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func Socket(domain, typ, proto int) (fd int, err error) {
 	if domain == AF_INET6 &amp;&amp; SocketDisableIPv6 {
 		return -1, EAFNOSUPPORT
 	}
@@ -504,21 +546,21 @@ src\net\net.go</p>
 </code></pre></td></tr></table>
 </div>
 </div><p>src\syscall\zsyscall_linux_amd64.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>// THIS FILE IS GENERATED BY THE COMMAND AT THE TOP; DO NOT EDIT
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">// THIS FILE IS GENERATED BY THE COMMAND AT THE TOP; DO NOT EDIT
 
 func socket(domain int, typ int, proto int) (fd int, err error) {
 	r0, _, e1 := RawSyscall(SYS_SOCKET, uintptr(domain), uintptr(typ), uintptr(proto))
@@ -531,16 +573,16 @@ func socket(domain int, typ int, proto int) (fd int, err error) {
 </code></pre></td></tr></table>
 </div>
 </div><p>src\syscall\zsysnum_linux_amd64.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>const {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">const {
     ...
     SYS_SOCKET                 = 41
     ...
@@ -548,19 +590,19 @@ func socket(domain int, typ int, proto int) (fd int, err error) {
 </code></pre></td></tr></table>
 </div>
 </div><p>src\syscall\asm_linux_amd64.s</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
-</span><span class=lnt>8
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>// func RawSyscall(trap, a1, a2, a3 uintptr) (r1, r2, err uintptr)
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">// func RawSyscall(trap, a1, a2, a3 uintptr) (r1, r2, err uintptr)
 TEXT ·RawSyscall(SB),NOSPLIT,$0-56
 	MOVQ	a1+8(FP), DI
 	MOVQ	a2+16(FP), SI
@@ -571,24 +613,24 @@ TEXT ·RawSyscall(SB),NOSPLIT,$0-56
 </code></pre></td></tr></table>
 </div>
 </div><p>以上4段代码逻辑都比较简单，就是实现了一个socket的系统调用，最后的rawSyscall是使用汇编实现的一段系统调用方法，创建socket的系统调用号是SYS_SOCKET。</p>
-<h2 id=setdefaultsockopts>setDefaultSockopts</h2>
+<h2 id="setdefaultsockopts">setDefaultSockopts</h2>
 <p>老规矩，上代码：</p>
 <p>src\net\sockopt_linux.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func setDefaultSockopts(s, family, sotype int, ipv6only bool) error {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func setDefaultSockopts(s, family, sotype int, ipv6only bool) error {
 	if family == syscall.AF_INET6 &amp;&amp; sotype != syscall.SOCK_RAW {
 		syscall.SetsockoptInt(s, syscall.IPPROTO_IPV6, syscall.IPV6_V6ONLY, boolint(ipv6only))
 	}
@@ -602,27 +644,27 @@ TEXT ·RawSyscall(SB),NOSPLIT,$0-56
 </div>
 </div><p>可见代码在一定条件下设置了是否只允许ipv6。如果是udp的话，还将socket设置为允许广播。
 syscall.SetsockoptInt方法同syscall.Socket方法，都是syscall中的系统调用。</p>
-<h2 id=newfd>newFD</h2>
+<h2 id="newfd">newFD</h2>
 <p>废话不多说，上代码：</p>
 <p>src\net\fd_unix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func newFD(sysfd, family, sotype int, net string) (*netFD, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func newFD(sysfd, family, sotype int, net string) (*netFD, error) {
 	ret := &amp;netFD{
 		pfd: poll.FD{
 			Sysfd:         sysfd,
@@ -638,21 +680,21 @@ syscall.SetsockoptInt方法同syscall.Socket方法，都是syscall中的系统�
 </code></pre></td></tr></table>
 </div>
 </div><p>newFD方法将创建成功的系统fd包装成了netFD，下面挑选几个netFD的重要方法来了解它：</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *netFD) Read(p []byte) (n int, err error)
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (fd *netFD) Read(p []byte) (n int, err error)
 func (fd *netFD) Write(p []byte) (nn int, err error)
 func (fd *netFD) SetDeadline(t time.Time)
 func (fd *netFD) SetReadDeadline(t time.Time)
@@ -665,38 +707,38 @@ func (fd *netFD) listenDatagram(laddr sockaddr, ctrlFn func(string, string, sysc
 </code></pre></td></tr></table>
 </div>
 </div><p>netFD除了具有读写socket的方法，还实现了listen、accept及dial方法。</p>
-<h2 id=fdlistenstream>fd.listenStream</h2>
+<h2 id="fdlistenstream">fd.listenStream</h2>
 <p>socket创建成功后，进而就是进行端口绑定和监听，看代码：</p>
 <p>src\net\sock_posix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
-</span><span class=lnt>17
-</span><span class=lnt>18
-</span><span class=lnt>19
-</span><span class=lnt>20
-</span><span class=lnt>21
-</span><span class=lnt>22
-</span><span class=lnt>23
-</span><span class=lnt>24
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
+</span><span class="lnt">21
+</span><span class="lnt">22
+</span><span class="lnt">23
+</span><span class="lnt">24
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *netFD) listenStream(laddr sockaddr, backlog int, ctrlFn func(string, string, syscall.RawConn) error) error {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (fd *netFD) listenStream(laddr sockaddr, backlog int, ctrlFn func(string, string, syscall.RawConn) error) error {
 	
         ...
     
@@ -726,87 +768,126 @@ func (fd *netFD) listenDatagram(laddr sockaddr, ctrlFn func(string, string, sysc
 <p>syscall.Bind又一个系统调用，注意fd.pfd.Sysfd就是我们新创建的socket的fd，lsa则是我们最初传入的ip:port经过转换后的地址，Bind将这个地址绑定到我们创建的socket上。
 listenFunc是一个方法变量，存储各种操作系统的Listen方法：</p>
 <p>src\net\hook_unix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>listenFunc        func(int, int) error              = syscall.Listen
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">listenFunc        func(int, int) error              = syscall.Listen
 </code></pre></td></tr></table>
 </div>
 </div><p>经过Listen系统调用，我们的socket就被激活了，内核将接收连接到此socket的连接请求。下一步调用accept就可以取到连接请求的socket了。</p>
 <p>呼呼😓，终于把端口绑定和监听的大体代码流程捋完了。看下面这张图，本文对应到了TCP Server的监听socket创建和bind、listen，下一章将继续介绍accept。</p>
-<p><img src=/2.png alt=2></p>
+<p><img src="/2.png" alt="2"></p>
 <p>最后将开头ListenConfig的Controller属性的调用时机补上，netFD.listenStream方法中的ctrlFn就是这个属性，可见它是在监听socket创建后，bind调用之前被回调的。应该是开放给应用层个性化设置socket的属性的。</p>
 <p>最最后再把backlog说一下😄，在netFD.listenStream方法中的<code>listenFunc(fd.pfd.Sysfd, backlog)</code>这一行中的backlog参数控制着待处理连接队列的长度，如果队列已满，新的连接请求将被忽略。backlog的值取自系统参数（linux系统）<code>/proc/sys/net/core/somaxconn</code>，如果读取失败，默认设置为128。如果值超过backlog可以存储的最大值（内核版本4.1以下backlog使用uint16存储，高版本使用uint32存储），将被设置为可存储的最大值。</p>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">Author</span>
+    <span class="item-content">刘玮</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">LastMod</span>
+    <span class="item-content">
+        2022-02-12
+        
+    </span>
+  </p>
+  
+  
 </div>
-<div class=post-copyright>
-<p class=copyright-item>
-<span class=item-title>Author</span>
-<span class=item-content>刘玮</span>
-</p>
-<p class=copyright-item>
-<span class=item-title>LastMod</span>
-<span class=item-content>
-2022-02-12
-</span>
-</p>
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/go/">Go</a>
+          <a href="/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">源码解析</a>
+          <a href="/tags/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/">网络编程</a>
+          </div>
+      <nav class="post-nav">
+        <a class="prev" href="/post/go-tcp2/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">go源码解析之TCP连接（二）——Accept</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="mailto:skyscar@126.com" class="iconfont icon-email" title="email"></a>
+      <a href="https://github.com/erberry" class="iconfont icon-github" title="github"></a>
+      <a href="https://www.zhihu.com/people/liu-wei-54-20" class="iconfont icon-zhihu" title="zhihu"></a>
+      <a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&amp;action=getalbum&amp;album_id=2008233094889144321&amp;scene=173&amp;subscene=0&amp;sessionid=1644638615&amp;enterid=1644638666&amp;from_msgid=2247484265&amp;from_itemidx=1&amp;count=3&amp;nolastread=1#wechat_redirect" class="iconfont icon-wechat" title="wechat"></a>
+  <a href="https://erberry.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
 </div>
-<footer class=post-footer>
-<div class=post-tags>
-<a href=/tags/go/>Go</a>
-<a href=/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/>源码解析</a>
-<a href=/tags/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/>网络编程</a>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  <div class="busuanzi-footer">
+    <span id="busuanzi_container_site_pv"> site pv: <span id="busuanzi_value_site_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+      <span class="division">|</span>
+    <span id="busuanzi_container_site_uv"> site uv: <span id="busuanzi_value_site_uv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+  </div>
+
+  <span class="copyright-year">
+    &copy; 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>刘玮</span>
+  </span>
 </div>
-<nav class=post-nav>
-<a class=prev href=/post/go-tcp2/>
-<i class="iconfont icon-left"></i>
-<span class="prev-text nav-default">go源码解析之TCP连接（二）——Accept</span>
-<span class="prev-text nav-mobile">Prev</span>
-</a>
-</nav>
-</footer>
-</article>
-</div>
-</div>
-</main>
-<footer id=footer class=footer>
-<div class=social-links>
-<a href=mailto:skyscar@126.com class="iconfont icon-email" title=email></a>
-<a href=https://github.com/erberry class="iconfont icon-github" title=github></a>
-<a href=https://www.zhihu.com/people/liu-wei-54-20 class="iconfont icon-zhihu" title=zhihu></a>
-<a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&action=getalbum&album_id=2008233094889144321&scene=173&subscene=0&sessionid=1644638615&enterid=1644638666&from_msgid=2247484265&from_itemidx=1&count=3&nolastread=1#wechat_redirect" class="iconfont icon-wechat" title=wechat></a>
-<a href=https://erberry.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a>
-</div>
-<div class=copyright>
-<span class=power-by>
-Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a>
-</span>
-<span class=division>|</span>
-<span class=theme-info>
-Theme -
-<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a>
-</span>
-<div class=busuanzi-footer>
-<span id=busuanzi_container_site_pv> site pv: <span id=busuanzi_value_site_pv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
-<span class=division>|</span>
-<span id=busuanzi_container_site_uv> site uv: <span id=busuanzi_value_site_uv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
-</div>
-<span class=copyright-year>
-&copy;
-2022<span class=heart><i class="iconfont icon-heart"></i></span><span>刘玮</span>
-</span>
-</div>
-</footer>
-<div class=back-to-top id=back-to-top>
-<i class="iconfont icon-up"></i>
-</div>
-</div>
-<script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
-<script type=text/javascript src=/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js></script>
-<script type=application/javascript>var doNotTrack=!1;doNotTrack||(window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga('create','UA-191525181-1','auto'),ga('set','anonymizeIp',!0),ga('send','pageview'))</script>
-<script async src=https://www.google-analytics.com/analytics.js></script>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-191525181-1', 'auto');
+	ga('set', 'anonymizeIp', true);
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+
 </body>
 </html>

@@ -1,145 +1,187 @@
-<!doctype html><html lang=en>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset=utf-8>
-<meta http-equiv=x-ua-compatible content="IE=edge,chrome=1">
-<title>go源码解析之TCP连接（二）——Accept - 刘玮的博客</title>
-<meta name=renderer content="webkit">
-<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta http-equiv=cache-control content="no-transform">
-<meta http-equiv=cache-control content="no-siteapp">
-<meta name=theme-color content="#f8f5ec">
-<meta name=msapplication-navbutton-color content="#f8f5ec">
-<meta name=apple-mobile-web-app-capable content="yes">
-<meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec">
-<meta name=author content="刘玮"><meta name=description content="go源码解析之TCP连接"><meta name=keywords content="Go,源码解析,网络编程">
-<meta name=generator content="Hugo 0.92.1 with theme even">
-<link rel=canonical href=https://erberry.github.io/post/go-tcp2/>
-<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
-<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
-<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
-<link rel=manifest href=/manifest.json>
-<link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5>
-<script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
-<link href=/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css rel=stylesheet>
-<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous>
-<meta property="og:title" content="go源码解析之TCP连接（二）——Accept">
-<meta property="og:description" content="go源码解析之TCP连接">
-<meta property="og:type" content="article">
-<meta property="og:url" content="https://erberry.github.io/post/go-tcp2/"><meta property="article:section" content="post">
-<meta property="article:published_time" content="2022-02-12T19:58:05+08:00">
-<meta property="article:modified_time" content="2022-02-12T19:58:05+08:00">
-<meta itemprop=name content="go源码解析之TCP连接（二）——Accept">
-<meta itemprop=description content="go源码解析之TCP连接"><meta itemprop=datePublished content="2022-02-12T19:58:05+08:00">
-<meta itemprop=dateModified content="2022-02-12T19:58:05+08:00">
-<meta itemprop=wordCount content="3488">
-<meta itemprop=keywords content="Go,源码解析,网络编程,"><meta name=twitter:card content="summary">
-<meta name=twitter:title content="go源码解析之TCP连接（二）——Accept">
-<meta name=twitter:description content="go源码解析之TCP连接"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
-<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]-->
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>go源码解析之TCP连接（二）——Accept - 刘玮的博客</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="刘玮" /><meta name="description" content="go源码解析之TCP连接" /><meta name="keywords" content="Go, 源码解析, 网络编程" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.92.1 with theme even" />
+
+
+<link rel="canonical" href="https://erberry.github.io/post/go-tcp2/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<link href="/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="go源码解析之TCP连接（二）——Accept" />
+<meta property="og:description" content="go源码解析之TCP连接" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://erberry.github.io/post/go-tcp2/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-12T19:58:05+08:00" />
+<meta property="article:modified_time" content="2022-02-12T19:58:05+08:00" />
+
+<meta itemprop="name" content="go源码解析之TCP连接（二）——Accept">
+<meta itemprop="description" content="go源码解析之TCP连接"><meta itemprop="datePublished" content="2022-02-12T19:58:05+08:00" />
+<meta itemprop="dateModified" content="2022-02-12T19:58:05+08:00" />
+<meta itemprop="wordCount" content="3488">
+<meta itemprop="keywords" content="Go,源码解析,网络编程," /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="go源码解析之TCP连接（二）——Accept"/>
+<meta name="twitter:description" content="go源码解析之TCP连接"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
 </head>
 <body>
-<div id=mobile-navbar class=mobile-navbar>
-<div class=mobile-header-logo>
-<a href=/ class=logo>刘玮的博客</a>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">刘玮的博客</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
 </div>
-<div class=mobile-navbar-icon>
-<span></span>
-<span></span>
-<span></span>
-</div>
-</div>
-<nav id=mobile-menu class="mobile-menu slideout-menu">
-<ul class=mobile-menu-list>
-<a href=/>
-<li class=mobile-menu-item>主页</li>
-</a><a href=/post/>
-<li class=mobile-menu-item>归档</li>
-</a><a href=/tags/>
-<li class=mobile-menu-item>标签</li>
-</a><a href=/categories/>
-<li class=mobile-menu-item>分类</li>
-</a><a href=/about/>
-<li class=mobile-menu-item>关于</li>
-</a>
-</ul>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">归档</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">标签</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">分类</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
 </nav>
-<div class=container id=mobile-panel>
-<header id=header class=header>
-<div class=logo-wrapper>
-<a href=/ class=logo>刘玮的博客</a>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">刘玮的博客</a>
 </div>
-<nav class=site-navbar>
-<ul id=menu class=menu>
-<li class=menu-item>
-<a class=menu-item-link href=/>主页</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/post/>归档</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/tags/>标签</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/categories/>分类</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/about/>关于</a>
-</li>
-</ul>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">归档</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">标签</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">分类</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
 </nav>
-</header>
-<main id=main class=main>
-<div class=content-wrapper>
-<div id=content class=content>
-<article class=post>
-<header class=post-header>
-<h1 class=post-title>go源码解析之TCP连接（二）——Accept</h1>
-<div class=post-meta>
-<span class=post-time> 2022-02-12 </span>
-<div class=post-category>
-<a href=/categories/go/> Go </a>
-</div>
-<span id=busuanzi_container_page_pv class=more-meta> <span id=busuanzi_value_page_pv><img src=/img/spinner.svg alt=spinner.svg></span> times read </span>
-</div>
-</header>
-<div class=post-toc id=post-toc>
-<h2 class=post-toc-title>Contents</h2>
-<div class="post-toc-content always-active">
-<nav id=TableOfContents>
-<ul>
-<li>
-<ul>
-<li><a href=#连接是如何建立的>连接是如何建立的</a>
-<ul>
-<li><a href=#1tcplistener的accept方法>1.TCPListener的Accept方法</a></li>
-<li><a href=#2setkeepalive>2.setKeepAlive</a></li>
-<li><a href=#3netfd的accept方法>3.netFD的accept方法</a></li>
-<li><a href=#4-newtcpconn>4. newTCPConn</a></li>
-<li><a href=#5-小结>5. 小结</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">go源码解析之TCP连接（二）——Accept</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-12 </span>
+        <div class="post-category">
+            <a href="/categories/go/"> Go </a>
+            </div>
+        <span id="busuanzi_container_page_pv" class="more-meta"> <span id="busuanzi_value_page_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> times read </span>
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#连接是如何建立的">连接是如何建立的</a>
+          <ul>
+            <li><a href="#1tcplistener的accept方法">1.TCPListener的Accept方法</a></li>
+            <li><a href="#2setkeepalive">2.setKeepAlive</a></li>
+            <li><a href="#3netfd的accept方法">3.netFD的accept方法</a></li>
+            <li><a href="#4-newtcpconn">4. newTCPConn</a></li>
+            <li><a href="#5-小结">5. 小结</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
 </nav>
+  </div>
 </div>
-</div>
-<div class=post-content>
-<p><em>go源码解析之TCP连接系列基于go源码1.16.5</em></p>
-<h2 id=连接是如何建立的>连接是如何建立的</h2>
+    <div class="post-content">
+      <p><em>go源码解析之TCP连接系列基于go源码1.16.5</em></p>
+<h2 id="连接是如何建立的">连接是如何建立的</h2>
 <p>上一章我们通过跟踪net.Listen的调用，了解了socket的创建、端口绑定、开启监听。最后net.Listen返回了一个Listener（具体对于TCP连接为TCPListener），本章将通过该Listener的Accept方法的跟踪来了解连接的建立过程。</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>ln, err := net.Listen(&#34;tcp&#34;, &#34;:8080&#34;)
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">ln, err := net.Listen(&#34;tcp&#34;, &#34;:8080&#34;)
 if err != nil {
         // handle error
 }
@@ -153,19 +195,19 @@ for {
 </code></pre></td></tr></table>
 </div>
 </div><p><strong>下面我们通过逐行跟踪源码，来看连接建立的过程：</strong></p>
-<h3 id=1tcplistener的accept方法>1.TCPListener的Accept方法</h3>
+<h3 id="1tcplistener的accept方法">1.TCPListener的Accept方法</h3>
 <p>src/net/tcpsock.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (l *TCPListener) Accept() (Conn, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (l *TCPListener) Accept() (Conn, error) {
     ...
 	c, err := l.accept()
     ...
@@ -175,27 +217,27 @@ for {
 </div>
 </div><p>Accept调用了TCPListener的内部方法accept：</p>
 <p>src/net/tcpsock_posix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (ln *TCPListener) accept() (*TCPConn, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (ln *TCPListener) accept() (*TCPConn, error) {
 	fd, err := ln.fd.accept()
 	if err != nil {
 		return nil, err
@@ -216,44 +258,44 @@ for {
 </div><p>我们先跳过ln.fd.accept和newTCPConn两个方法调用，将上一章遗留的KeepAlive配置项看一下：
 大家应该还记得KeepAlive是ListenConfig中的一个属性，而ListenConfig和创建成功的监听netFD被赋值给了TCPListener：</p>
 <p>src/net/tcpsock.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type TCPListener struct {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">type TCPListener struct {
 	fd *netFD
 	lc ListenConfig
 }
 </code></pre></td></tr></table>
 </div>
 </div><p>如果KeepAlive大于等于0，设置socket开启KeepAlive，如果KeepAlive等于0，默认设置socket的TCP_KEEPINTVL和TCP_KEEPIDLE属性为15秒，否则设置为用户指定的时间。</p>
-<h3 id=2setkeepalive>2.setKeepAlive</h3>
+<h3 id="2setkeepalive">2.setKeepAlive</h3>
 <p>setKeepAlive和setKeepAlivePeriod方法类似，都是设置socket的属性，我们放到一起来看：</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func setKeepAlive(fd *netFD, keepalive bool) error {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func setKeepAlive(fd *netFD, keepalive bool) error {
 	err := fd.pfd.SetsockoptInt(syscall.SOL_SOCKET, syscall.SO_KEEPALIVE, boolint(keepalive))
 	runtime.KeepAlive(fd)
 	return wrapSyscallError(&#34;setsockopt&#34;, err)
@@ -273,16 +315,16 @@ func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
 </div>
 </div><p>两个方法中都执行了fd.pfd.SetsockoptInt，而pfd则是netFD中的一个属性：</p>
 <p>src/net/fd_posix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type netFD struct {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">type netFD struct {
 	pfd poll.FD
 
     ...
@@ -291,15 +333,15 @@ func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
 </div>
 </div><p>进一步看poll.FD的SetsockoptInt方法：</p>
 <p>src/internal/poll/sockopt.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *FD) SetsockoptInt(level, name, arg int) error {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (fd *FD) SetsockoptInt(level, name, arg int) error {
     ...
     return syscall.SetsockoptInt(fd.Sysfd, level, name, arg)
 }
@@ -316,24 +358,24 @@ func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
 </ol>
 <p>setKeepAlive方法中的SO_KEEPALIVE则是设置keepalive的总开关，setKeepAlivePeriod中的TCP_KEEPINTVL对应tcp_keepalive_intvl参数，TCP_KEEPIDLE对应tcp_keepalive_time参数。TCP_KEEPCNT对应tcp_keepalive_probes，但是代码中没有搜索到使用的地方。</p>
 <p>让我们回到accept的主流程，先跟一下ln.fd.accept方法调用：</p>
-<h3 id=3netfd的accept方法>3.netFD的accept方法</h3>
+<h3 id="3netfd的accept方法">3.netFD的accept方法</h3>
 <p>src/net/fd_unix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *netFD) accept() (netfd *netFD, err error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (fd *netFD) accept() (netfd *netFD, err error) {
 	d, rsa, errcall, err := fd.pfd.Accept()
 	...
 
@@ -348,31 +390,31 @@ func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
 </div>
 </div><p>pfd.Accept即poll.FD的Accept方法，代码如下：</p>
 <p>src/internal/poll/fd_unix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
-</span><span class=lnt>16
-</span><span class=lnt>17
-</span><span class=lnt>18
-</span><span class=lnt>19
-</span><span class=lnt>20
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
+</span><span class="lnt">16
+</span><span class="lnt">17
+</span><span class="lnt">18
+</span><span class="lnt">19
+</span><span class="lnt">20
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (fd *FD) Accept() (int, syscall.Sockaddr, string, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (fd *FD) Accept() (int, syscall.Sockaddr, string, error) {
     ...
 	for {
 		s, rsa, errcall, err := accept(fd.Sysfd)
@@ -396,22 +438,22 @@ func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
 </div>
 </div><p>内部方法accept代码如下：</p>
 <p>src/internal/poll/sock_cloexec.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func accept(s int) (int, syscall.Sockaddr, string, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func accept(s int) (int, syscall.Sockaddr, string, error) {
 	ns, sa, err := Accept4Func(s, syscall.SOCK_NONBLOCK|syscall.SOCK_CLOEXEC)
 	
 	switch err {
@@ -427,17 +469,17 @@ func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
 </div><p>Accept4Func同样是一个系统调用方法：<code>var Accept4Func func(int, int) (int, syscall.Sockaddr, error) = syscall.Accept4</code>，参数s是socket的fd，SOCK_NONBLOCK|SOCK_CLOEXEC则是设置新连接socket的属性。连接成功返回新连接socket的fd和主机地址信息。</p>
 <p>我们再返回到poll.FD的Accept方法，accept返回后，如果没有错误就返回新连接socket的fd和主机地址信息。如果错误是EAGAIN（socket被设置为非阻塞模式，在这个socket上的系统调用都会立即返回而不会阻塞线程，例如此处的accept调用，即使没有新的连接，也会立即返回，但是错误信息会被设置为EAGAIN），并且fd.pd.pollable为true时，阻塞当前goroutine进行等待，直到有新的可读消息（此处为有新连接）时continue，再次调用accept进行接收连接。</p>
 <p>这里提前简单说一下pollDesc（即FD中的pd），它是IO多路复用（如epoll、kqueue、CompletionPort等）在go语言中的集成，<code>fd.pd.waitRead</code> 即是等待io消息的到来。后续将有单独章节介绍epoll在go语言网络库中的使用。</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type FD struct {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">type FD struct {
     ...
 	// I/O poller.
 	pd pollDesc
@@ -447,24 +489,24 @@ func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
 </div>
 </div><p>poll.FD的Accept方法返回到netFD的accept方法中，接着调用了newFD创建了netFD，newFD方法在上一章已经介绍，不再赘述。</p>
 <p>到目前为止，整个调用链路基本讲完了，我们现在通过下面这张图回顾一下：</p>
-<p><img src=/3.png alt=3></p>
+<p><img src="/3.png" alt="3"></p>
 <ol>
 <li>TCPListener的accept方法调用netFD的accept方法，返回成功后，调用newTCPConn构建连接对象，并设置连接的keepalive属性</li>
 <li>netFD的accept方法调用poll.FD的Accept方法，返回成功后，调用newFD创建新socket的netFD对象</li>
 <li>poll.FD的Accept方法进行accept系统调用，如果有新连接建立成功则返回新连接socket的fd，如果遇到EAGAIN错误，则阻塞当前goroutine进行IO消息等待。</li>
 </ol>
-<h3 id=4-newtcpconn>4. newTCPConn</h3>
+<h3 id="4-newtcpconn">4. newTCPConn</h3>
 <p>src/net/tcp_sock.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func newTCPConn(fd *netFD) *TCPConn {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func newTCPConn(fd *netFD) *TCPConn {
 	c := &amp;TCPConn{conn{fd}}
 	setNoDelay(c.fd, true)
 	return c
@@ -473,26 +515,26 @@ func setKeepAlivePeriod(fd *netFD, d time.Duration) error {
 </div>
 </div><p>conn是对接口类型Conn的实现，conn的唯一属性则是我们前面一直提到的netFD，conn的核心方法都是对netFD方法的包装：</p>
 <p>src/net/net.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
-</span><span class=lnt>12
-</span><span class=lnt>13
-</span><span class=lnt>14
-</span><span class=lnt>15
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
+</span><span class="lnt">12
+</span><span class="lnt">13
+</span><span class="lnt">14
+</span><span class="lnt">15
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type Conn interface {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">type Conn interface {
 	Read(b []byte) (n int, err error)
 	Write(b []byte) (n int, err error)
 	Close() error
@@ -511,22 +553,22 @@ type conn struct {
 </div>
 </div><p>TCPConn继承自conn，它比较独特的一个方法就是ReadFrom，用来从一个Reader中读取数据并写入到TCPConn的socket上：</p>
 <p>src/net/tcpsock.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt> 1
-</span><span class=lnt> 2
-</span><span class=lnt> 3
-</span><span class=lnt> 4
-</span><span class=lnt> 5
-</span><span class=lnt> 6
-</span><span class=lnt> 7
-</span><span class=lnt> 8
-</span><span class=lnt> 9
-</span><span class=lnt>10
-</span><span class=lnt>11
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt"> 1
+</span><span class="lnt"> 2
+</span><span class="lnt"> 3
+</span><span class="lnt"> 4
+</span><span class="lnt"> 5
+</span><span class="lnt"> 6
+</span><span class="lnt"> 7
+</span><span class="lnt"> 8
+</span><span class="lnt"> 9
+</span><span class="lnt">10
+</span><span class="lnt">11
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>type TCPConn struct {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">type TCPConn struct {
 	conn
 }
 
@@ -540,20 +582,20 @@ func (c *TCPConn) ReadFrom(r io.Reader) (int64, error) {
 </code></pre></td></tr></table>
 </div>
 </div><p>src/net/tcpsock_posix.go</p>
-<div class=highlight><div class=chroma>
-<table class=lntable><tr><td class=lntd>
-<pre tabindex=0 class=chroma><code><span class=lnt>1
-</span><span class=lnt>2
-</span><span class=lnt>3
-</span><span class=lnt>4
-</span><span class=lnt>5
-</span><span class=lnt>6
-</span><span class=lnt>7
-</span><span class=lnt>8
-</span><span class=lnt>9
+<div class="highlight"><div class="chroma">
+<table class="lntable"><tr><td class="lntd">
+<pre tabindex="0" class="chroma"><code><span class="lnt">1
+</span><span class="lnt">2
+</span><span class="lnt">3
+</span><span class="lnt">4
+</span><span class="lnt">5
+</span><span class="lnt">6
+</span><span class="lnt">7
+</span><span class="lnt">8
+</span><span class="lnt">9
 </span></code></pre></td>
-<td class=lntd>
-<pre tabindex=0 class=chroma><code class=language-fallback data-lang=fallback>func (c *TCPConn) readFrom(r io.Reader) (int64, error) {
+<td class="lntd">
+<pre tabindex="0" class="chroma"><code class="language-fallback" data-lang="fallback">func (c *TCPConn) readFrom(r io.Reader) (int64, error) {
 	if n, err, handled := splice(c.fd, r); handled {
 		return n, err
 	}
@@ -571,7 +613,7 @@ func (c *TCPConn) ReadFrom(r io.Reader) (int64, error) {
 <li>genericReadFrom，回归到最原始的数据拷贝方式</li>
 </ol>
 <p>如果我们需要向socket写入数据并且数据源实现了Reader接口的话，我们可以选择使用ReadFrom方法来提高性能。</p>
-<h3 id=5-小结>5. 小结</h3>
+<h3 id="5-小结">5. 小结</h3>
 <p>今天通过跟踪TCPListener的Accept方法，了解了server侧接收到新连接的过程。总结为以下几个点：</p>
 <ol>
 <li><code>TCPConn继承自conn，conn对netFD进行包装并实现了Conn接口，netFD对poll.FD进行包装，poll.FD对系统fd进行包装</code></li>
@@ -579,79 +621,117 @@ func (c *TCPConn) ReadFrom(r io.Reader) (int64, error) {
 <li>避免用户空间到内核空间的数据拷贝的两种方式：splice和sendfile</li>
 </ol>
 <p>下一章我们将对TCPConn的Read方法进行跟踪，来了解数据读取的过程。</p>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">Author</span>
+    <span class="item-content">刘玮</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">LastMod</span>
+    <span class="item-content">
+        2022-02-12
+        
+    </span>
+  </p>
+  
+  
 </div>
-<div class=post-copyright>
-<p class=copyright-item>
-<span class=item-title>Author</span>
-<span class=item-content>刘玮</span>
-</p>
-<p class=copyright-item>
-<span class=item-title>LastMod</span>
-<span class=item-content>
-2022-02-12
-</span>
-</p>
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/go/">Go</a>
+          <a href="/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/">源码解析</a>
+          <a href="/tags/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/">网络编程</a>
+          </div>
+      <nav class="post-nav">
+        <a class="prev" href="/post/go-tcp3/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">go源码解析之TCP连接（三）——Read</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/go-tcp1/">
+            <span class="next-text nav-default">go源码解析之TCP连接（一）——Listen</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="mailto:skyscar@126.com" class="iconfont icon-email" title="email"></a>
+      <a href="https://github.com/erberry" class="iconfont icon-github" title="github"></a>
+      <a href="https://www.zhihu.com/people/liu-wei-54-20" class="iconfont icon-zhihu" title="zhihu"></a>
+      <a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&amp;action=getalbum&amp;album_id=2008233094889144321&amp;scene=173&amp;subscene=0&amp;sessionid=1644638615&amp;enterid=1644638666&amp;from_msgid=2247484265&amp;from_itemidx=1&amp;count=3&amp;nolastread=1#wechat_redirect" class="iconfont icon-wechat" title="wechat"></a>
+  <a href="https://erberry.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
 </div>
-<footer class=post-footer>
-<div class=post-tags>
-<a href=/tags/go/>Go</a>
-<a href=/tags/%E6%BA%90%E7%A0%81%E8%A7%A3%E6%9E%90/>源码解析</a>
-<a href=/tags/%E7%BD%91%E7%BB%9C%E7%BC%96%E7%A8%8B/>网络编程</a>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  <div class="busuanzi-footer">
+    <span id="busuanzi_container_site_pv"> site pv: <span id="busuanzi_value_site_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+      <span class="division">|</span>
+    <span id="busuanzi_container_site_uv"> site uv: <span id="busuanzi_value_site_uv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+  </div>
+
+  <span class="copyright-year">
+    &copy; 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>刘玮</span>
+  </span>
 </div>
-<nav class=post-nav>
-<a class=prev href=/post/go-tcp3/>
-<i class="iconfont icon-left"></i>
-<span class="prev-text nav-default">go源码解析之TCP连接（三）——Read</span>
-<span class="prev-text nav-mobile">Prev</span>
-</a>
-<a class=next href=/post/go-tcp1/>
-<span class="next-text nav-default">go源码解析之TCP连接（一）——Listen</span>
-<span class="next-text nav-mobile">Next</span>
-<i class="iconfont icon-right"></i>
-</a>
-</nav>
-</footer>
-</article>
-</div>
-</div>
-</main>
-<footer id=footer class=footer>
-<div class=social-links>
-<a href=mailto:skyscar@126.com class="iconfont icon-email" title=email></a>
-<a href=https://github.com/erberry class="iconfont icon-github" title=github></a>
-<a href=https://www.zhihu.com/people/liu-wei-54-20 class="iconfont icon-zhihu" title=zhihu></a>
-<a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&action=getalbum&album_id=2008233094889144321&scene=173&subscene=0&sessionid=1644638615&enterid=1644638666&from_msgid=2247484265&from_itemidx=1&count=3&nolastread=1#wechat_redirect" class="iconfont icon-wechat" title=wechat></a>
-<a href=https://erberry.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a>
-</div>
-<div class=copyright>
-<span class=power-by>
-Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a>
-</span>
-<span class=division>|</span>
-<span class=theme-info>
-Theme -
-<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a>
-</span>
-<div class=busuanzi-footer>
-<span id=busuanzi_container_site_pv> site pv: <span id=busuanzi_value_site_pv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
-<span class=division>|</span>
-<span id=busuanzi_container_site_uv> site uv: <span id=busuanzi_value_site_uv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
-</div>
-<span class=copyright-year>
-&copy;
-2022<span class=heart><i class="iconfont icon-heart"></i></span><span>刘玮</span>
-</span>
-</div>
-</footer>
-<div class=back-to-top id=back-to-top>
-<i class="iconfont icon-up"></i>
-</div>
-</div>
-<script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
-<script type=text/javascript src=/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js></script>
-<script type=application/javascript>var doNotTrack=!1;doNotTrack||(window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga('create','UA-191525181-1','auto'),ga('set','anonymizeIp',!0),ga('send','pageview'))</script>
-<script async src=https://www.google-analytics.com/analytics.js></script>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-191525181-1', 'auto');
+	ga('set', 'anonymizeIp', true);
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+
 </body>
 </html>

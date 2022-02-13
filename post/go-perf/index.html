@@ -1,186 +1,228 @@
-<!doctype html><html lang=en>
+<!DOCTYPE html>
+<html lang="en">
 <head>
-<meta charset=utf-8>
-<meta http-equiv=x-ua-compatible content="IE=edge,chrome=1">
-<title>最接地气的Go服务优化指南 - 刘玮的博客</title>
-<meta name=renderer content="webkit">
-<meta name=viewport content="width=device-width,initial-scale=1,maximum-scale=1">
-<meta http-equiv=cache-control content="no-transform">
-<meta http-equiv=cache-control content="no-siteapp">
-<meta name=theme-color content="#f8f5ec">
-<meta name=msapplication-navbutton-color content="#f8f5ec">
-<meta name=apple-mobile-web-app-capable content="yes">
-<meta name=apple-mobile-web-app-status-bar-style content="#f8f5ec">
-<meta name=author content="刘玮"><meta name=description content="最接地气的Go服务优化指南"><meta name=keywords content="Go,performance optimization,性能优化">
-<meta name=generator content="Hugo 0.92.1 with theme even">
-<link rel=canonical href=https://erberry.github.io/post/go-perf/>
-<link rel=apple-touch-icon sizes=180x180 href=/apple-touch-icon.png>
-<link rel=icon type=image/png sizes=32x32 href=/favicon-32x32.png>
-<link rel=icon type=image/png sizes=16x16 href=/favicon-16x16.png>
-<link rel=manifest href=/manifest.json>
-<link rel=mask-icon href=/safari-pinned-tab.svg color=#5bbad5>
-<script async src=//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js></script>
-<link href=/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css rel=stylesheet>
-<link rel=stylesheet href=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin=anonymous>
-<meta property="og:title" content="最接地气的Go服务优化指南">
-<meta property="og:description" content="最接地气的Go服务优化指南">
-<meta property="og:type" content="article">
-<meta property="og:url" content="https://erberry.github.io/post/go-perf/"><meta property="article:section" content="post">
-<meta property="article:published_time" content="2022-02-12T20:10:05+08:00">
-<meta property="article:modified_time" content="2022-02-12T20:10:05+08:00">
-<meta itemprop=name content="最接地气的Go服务优化指南">
-<meta itemprop=description content="最接地气的Go服务优化指南"><meta itemprop=datePublished content="2022-02-12T20:10:05+08:00">
-<meta itemprop=dateModified content="2022-02-12T20:10:05+08:00">
-<meta itemprop=wordCount content="3420">
-<meta itemprop=keywords content="Go,"><meta name=twitter:card content="summary">
-<meta name=twitter:title content="最接地气的Go服务优化指南">
-<meta name=twitter:description content="最接地气的Go服务优化指南"><!--[if lte IE 9]><script src=https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js></script><![endif]--><!--[if lt IE 9]><script src=https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js></script>
-<script src=https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js></script><![endif]-->
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+  <title>最接地气的Go服务优化指南 - 刘玮的博客</title>
+  <meta name="renderer" content="webkit" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"/>
+
+<meta http-equiv="Cache-Control" content="no-transform" />
+<meta http-equiv="Cache-Control" content="no-siteapp" />
+
+<meta name="theme-color" content="#f8f5ec" />
+<meta name="msapplication-navbutton-color" content="#f8f5ec">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="#f8f5ec">
+
+
+<meta name="author" content="刘玮" /><meta name="description" content="最接地气的Go服务优化指南" /><meta name="keywords" content="Go, performance optimization, 性能优化" />
+
+
+
+
+
+
+<meta name="generator" content="Hugo 0.92.1 with theme even" />
+
+
+<link rel="canonical" href="https://erberry.github.io/post/go-perf/" />
+<link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+<link rel="manifest" href="/manifest.json">
+<link rel="mask-icon" href="/safari-pinned-tab.svg" color="#5bbad5">
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<link href="/sass/main.min.1443c0d397a940890aabf6f7889250fa06488ec6fcb6598c8d3bc4dc12533f6f.css" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.css" integrity="sha256-7TyXnr2YU040zfSP+rEcz29ggW4j56/ujTPwjMzyqFY=" crossorigin="anonymous">
+
+
+<meta property="og:title" content="最接地气的Go服务优化指南" />
+<meta property="og:description" content="最接地气的Go服务优化指南" />
+<meta property="og:type" content="article" />
+<meta property="og:url" content="https://erberry.github.io/post/go-perf/" /><meta property="article:section" content="post" />
+<meta property="article:published_time" content="2022-02-12T20:10:05+08:00" />
+<meta property="article:modified_time" content="2022-02-12T20:10:05+08:00" />
+
+<meta itemprop="name" content="最接地气的Go服务优化指南">
+<meta itemprop="description" content="最接地气的Go服务优化指南"><meta itemprop="datePublished" content="2022-02-12T20:10:05+08:00" />
+<meta itemprop="dateModified" content="2022-02-12T20:10:05+08:00" />
+<meta itemprop="wordCount" content="3420">
+<meta itemprop="keywords" content="Go," /><meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="最接地气的Go服务优化指南"/>
+<meta name="twitter:description" content="最接地气的Go服务优化指南"/>
+
+<!--[if lte IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/classlist/1.1.20170427/classList.min.js"></script>
+<![endif]-->
+
+<!--[if lt IE 9]>
+  <script src="https://cdn.jsdelivr.net/npm/html5shiv@3.7.3/dist/html5shiv.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/respond.js@1.4.2/dest/respond.min.js"></script>
+<![endif]-->
+
 </head>
 <body>
-<div id=mobile-navbar class=mobile-navbar>
-<div class=mobile-header-logo>
-<a href=/ class=logo>刘玮的博客</a>
+  <div id="mobile-navbar" class="mobile-navbar">
+  <div class="mobile-header-logo">
+    <a href="/" class="logo">刘玮的博客</a>
+  </div>
+  <div class="mobile-navbar-icon">
+    <span></span>
+    <span></span>
+    <span></span>
+  </div>
 </div>
-<div class=mobile-navbar-icon>
-<span></span>
-<span></span>
-<span></span>
-</div>
-</div>
-<nav id=mobile-menu class="mobile-menu slideout-menu">
-<ul class=mobile-menu-list>
-<a href=/>
-<li class=mobile-menu-item>主页</li>
-</a><a href=/post/>
-<li class=mobile-menu-item>归档</li>
-</a><a href=/tags/>
-<li class=mobile-menu-item>标签</li>
-</a><a href=/categories/>
-<li class=mobile-menu-item>分类</li>
-</a><a href=/about/>
-<li class=mobile-menu-item>关于</li>
-</a>
-</ul>
+<nav id="mobile-menu" class="mobile-menu slideout-menu">
+  <ul class="mobile-menu-list">
+    <a href="/">
+        <li class="mobile-menu-item">主页</li>
+      </a><a href="/post/">
+        <li class="mobile-menu-item">归档</li>
+      </a><a href="/tags/">
+        <li class="mobile-menu-item">标签</li>
+      </a><a href="/categories/">
+        <li class="mobile-menu-item">分类</li>
+      </a><a href="/about/">
+        <li class="mobile-menu-item">关于</li>
+      </a>
+  </ul>
+
+  
+
+
 </nav>
-<div class=container id=mobile-panel>
-<header id=header class=header>
-<div class=logo-wrapper>
-<a href=/ class=logo>刘玮的博客</a>
+
+  <div class="container" id="mobile-panel">
+    <header id="header" class="header">
+        <div class="logo-wrapper">
+  <a href="/" class="logo">刘玮的博客</a>
 </div>
-<nav class=site-navbar>
-<ul id=menu class=menu>
-<li class=menu-item>
-<a class=menu-item-link href=/>主页</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/post/>归档</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/tags/>标签</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/categories/>分类</a>
-</li><li class=menu-item>
-<a class=menu-item-link href=/about/>关于</a>
-</li>
-</ul>
+
+
+
+
+
+<nav class="site-navbar">
+  <ul id="menu" class="menu">
+    <li class="menu-item">
+        <a class="menu-item-link" href="/">主页</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/post/">归档</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/tags/">标签</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/categories/">分类</a>
+      </li><li class="menu-item">
+        <a class="menu-item-link" href="/about/">关于</a>
+      </li>
+  </ul>
 </nav>
-</header>
-<main id=main class=main>
-<div class=content-wrapper>
-<div id=content class=content>
-<article class=post>
-<header class=post-header>
-<h1 class=post-title>最接地气的Go服务优化指南</h1>
-<div class=post-meta>
-<span class=post-time> 2022-02-12 </span>
-<div class=post-category>
-<a href=/categories/go/> Go </a>
-</div>
-<span id=busuanzi_container_page_pv class=more-meta> <span id=busuanzi_value_page_pv><img src=/img/spinner.svg alt=spinner.svg></span> times read </span>
-</div>
-</header>
-<div class=post-toc id=post-toc>
-<h2 class=post-toc-title>Contents</h2>
-<div class="post-toc-content always-active">
-<nav id=TableOfContents>
-<ul>
-<li>
-<ul>
-<li><a href=#一压测>一、压测</a>
-<ul>
-<li><a href=#1-单接口压测>1. 单接口压测</a></li>
-<li><a href=#2-全链路压测>2. 全链路压测</a></li>
-<li><a href=#3-benchmark>3. benchmark</a></li>
-</ul>
-</li>
-<li><a href=#二工具>二、工具</a>
-<ul>
-<li><a href=#1-benchmark同上>1. benchmark（同上）</a></li>
-<li><a href=#2-go-pprof>2. go pprof</a></li>
-<li><a href=#3-系统监控>3. 系统监控</a></li>
-<li><a href=#4-应用监控>4. 应用监控</a></li>
-</ul>
-</li>
-<li><a href=#三业务侧优化>三、业务侧优化</a>
-<ul>
-<li><a href=#1-缓存>1. 缓存</a></li>
-<li><a href=#2-mysql>2. mysql</a></li>
-<li><a href=#3-redis>3. redis</a></li>
-<li><a href=#4-业务逻辑>4. 业务逻辑</a></li>
-<li><a href=#5-扩容升配>5. 扩容升配</a></li>
-</ul>
-</li>
-<li><a href=#四架构优化>四、架构优化</a>
-<ul>
-<li><a href=#1-分布式>1. 分布式</a></li>
-<li><a href=#2-微服务>2. 微服务</a></li>
-<li><a href=#3-容器化>3. 容器化</a></li>
-</ul>
-</li>
-<li><a href=#五底层优化>五、底层优化</a>
-<ul>
-<li><a href=#1-网络>1. 网络</a></li>
-<li><a href=#2-内存>2. 内存</a></li>
-<li><a href=#3-锁>3. 锁</a></li>
-</ul>
-</li>
-</ul>
-</li>
-</ul>
+
+    </header>
+
+    <main id="main" class="main">
+      <div class="content-wrapper">
+        <div id="content" class="content">
+          <article class="post">
+    
+    <header class="post-header">
+      <h1 class="post-title">最接地气的Go服务优化指南</h1>
+
+      <div class="post-meta">
+        <span class="post-time"> 2022-02-12 </span>
+        <div class="post-category">
+            <a href="/categories/go/"> Go </a>
+            </div>
+        <span id="busuanzi_container_page_pv" class="more-meta"> <span id="busuanzi_value_page_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> times read </span>
+      </div>
+    </header>
+
+    <div class="post-toc" id="post-toc">
+  <h2 class="post-toc-title">Contents</h2>
+  <div class="post-toc-content always-active">
+    <nav id="TableOfContents">
+  <ul>
+    <li>
+      <ul>
+        <li><a href="#一压测">一、压测</a>
+          <ul>
+            <li><a href="#1-单接口压测">1. 单接口压测</a></li>
+            <li><a href="#2-全链路压测">2. 全链路压测</a></li>
+            <li><a href="#3-benchmark">3. benchmark</a></li>
+          </ul>
+        </li>
+        <li><a href="#二工具">二、工具</a>
+          <ul>
+            <li><a href="#1-benchmark同上">1. benchmark（同上）</a></li>
+            <li><a href="#2-go-pprof">2. go pprof</a></li>
+            <li><a href="#3-系统监控">3. 系统监控</a></li>
+            <li><a href="#4-应用监控">4. 应用监控</a></li>
+          </ul>
+        </li>
+        <li><a href="#三业务侧优化">三、业务侧优化</a>
+          <ul>
+            <li><a href="#1-缓存">1. 缓存</a></li>
+            <li><a href="#2-mysql">2. mysql</a></li>
+            <li><a href="#3-redis">3. redis</a></li>
+            <li><a href="#4-业务逻辑">4. 业务逻辑</a></li>
+            <li><a href="#5-扩容升配">5. 扩容升配</a></li>
+          </ul>
+        </li>
+        <li><a href="#四架构优化">四、架构优化</a>
+          <ul>
+            <li><a href="#1-分布式">1. 分布式</a></li>
+            <li><a href="#2-微服务">2. 微服务</a></li>
+            <li><a href="#3-容器化">3. 容器化</a></li>
+          </ul>
+        </li>
+        <li><a href="#五底层优化">五、底层优化</a>
+          <ul>
+            <li><a href="#1-网络">1. 网络</a></li>
+            <li><a href="#2-内存">2. 内存</a></li>
+            <li><a href="#3-锁">3. 锁</a></li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
 </nav>
+  </div>
 </div>
-</div>
-<div class=post-content>
-<p><img src=/11.jpg alt=11></p>
-<h2 id=一压测>一、压测</h2>
-<h3 id=1-单接口压测>1. 单接口压测</h3>
-<h4 id=固定qps压测>固定QPS压测</h4>
+    <div class="post-content">
+      <p><img src="/11.jpg" alt="11"></p>
+<h2 id="一压测">一、压测</h2>
+<h3 id="1-单接口压测">1. 单接口压测</h3>
+<h4 id="固定qps压测">固定QPS压测</h4>
 <blockquote>
 <p>用于排查新功能对接口的影响</p>
 </blockquote>
-<h4 id=极限qps压测>极限QPS压测</h4>
+<h4 id="极限qps压测">极限QPS压测</h4>
 <blockquote>
 <p>用于摸排接口最大承载QPS</p>
 </blockquote>
-<h3 id=2-全链路压测>2. 全链路压测</h3>
-<h3 id=3-benchmark>3. benchmark</h3>
+<h3 id="2-全链路压测">2. 全链路压测</h3>
+<h3 id="3-benchmark">3. benchmark</h3>
 <blockquote>
 <p>用于代码层面方法的压测，可观察不同实现版本的方法的性能及内存使用</p>
 </blockquote>
-<h2 id=二工具>二、工具</h2>
-<h3 id=1-benchmark同上>1. benchmark（同上）</h3>
-<h3 id=2-go-pprof>2. go pprof</h3>
+<h2 id="二工具">二、工具</h2>
+<h3 id="1-benchmark同上">1. benchmark（同上）</h3>
+<h3 id="2-go-pprof">2. go pprof</h3>
 <ol>
 <li>cpu profile，用于排查cpu占用较高的代码逻辑</li>
 <li>memory profile，用于排查内存占用较高的代码逻辑</li>
 <li>goroutine profile，用于排查goroutine占用较高的代码逻辑（即goroutine都在执行哪些逻辑）</li>
 <li>block profile，用于排查阻塞运行的代码逻辑，例如大锁（mutex锁定了一个运行时间较长的逻辑，且有很多其他goroutine在等待这个锁）</li>
 </ol>
-<h3 id=3-系统监控>3. 系统监控</h3>
+<h3 id="3-系统监控">3. 系统监控</h3>
 <ul>
 <li>
 <p>cpu</p>
 <blockquote>
-<p>以固定速率增加压测qps，若cpu占用增长慢，接口延迟增长很快，可观察profile中的goroutine profile 和block profile，查看阻塞了运行的代码逻辑；若cpu占用增长快，可观察profile中的cpu profile，查看占用 cpu高的代码逻辑。</p>
+<p>以固定速率增加压测qps，若cpu占用增长慢，接口延迟增长很快，可观察profile中的goroutine profile	和block profile，查看阻塞了运行的代码逻辑；若cpu占用增长快，可观察profile中的cpu profile，查看占用	cpu高的代码逻辑。</p>
 </blockquote>
 </li>
 <li>
@@ -208,7 +250,7 @@
 </blockquote>
 </li>
 </ul>
-<h3 id=4-应用监控>4. 应用监控</h3>
+<h3 id="4-应用监控">4. 应用监控</h3>
 <ul>
 <li>
 <p>goroutine数量</p>
@@ -235,8 +277,8 @@
 </blockquote>
 </li>
 </ul>
-<h2 id=三业务侧优化>三、业务侧优化</h2>
-<h3 id=1-缓存>1. 缓存</h3>
+<h2 id="三业务侧优化">三、业务侧优化</h2>
+<h3 id="1-缓存">1. 缓存</h3>
 <ul>
 <li>
 <p>端上缓存</p>
@@ -269,7 +311,7 @@
 </blockquote>
 </li>
 </ul>
-<h3 id=2-mysql>2. mysql</h3>
+<h3 id="2-mysql">2. mysql</h3>
 <ul>
 <li>
 <p>索引优化</p>
@@ -314,7 +356,7 @@
 </blockquote>
 </li>
 </ul>
-<h3 id=3-redis>3. redis</h3>
+<h3 id="3-redis">3. redis</h3>
 <ul>
 <li>
 <p>避免大key、大value</p>
@@ -335,7 +377,7 @@
 </blockquote>
 </li>
 </ul>
-<h3 id=4-业务逻辑>4. 业务逻辑</h3>
+<h3 id="4-业务逻辑">4. 业务逻辑</h3>
 <ul>
 <li>
 <p>使用缓存</p>
@@ -398,28 +440,28 @@
 <p>熔断、降级</p>
 </li>
 </ul>
-<h3 id=5-扩容升配>5. 扩容升配</h3>
+<h3 id="5-扩容升配">5. 扩容升配</h3>
 <blockquote>
 <p>扩容升配是应对突发流量的临时有效解决方案</p>
 </blockquote>
 <blockquote>
 <p>扩容升配需要针对当前性能瓶颈才能到达更高的性价比</p>
 </blockquote>
-<h2 id=四架构优化>四、架构优化</h2>
-<h3 id=1-分布式>1. 分布式</h3>
+<h2 id="四架构优化">四、架构优化</h2>
+<h3 id="1-分布式">1. 分布式</h3>
 <blockquote>
 <p>分布式的系统架构本身就是为了达到高可用、高性能的目的。</p>
 </blockquote>
 <blockquote>
 <p>尽量避免单点服务的存在。</p>
 </blockquote>
-<h3 id=2-微服务>2. 微服务</h3>
+<h3 id="2-微服务">2. 微服务</h3>
 <blockquote>
 <p>从单体服务中将相对独立的业务模块拆分到若干微服务，一方面降低了某个业务模块故障对服务整体的影响；另一方面微服务拆分过程也是资源拆分、细化的过程，可以使得资源的分配更优。</p>
 </blockquote>
-<h3 id=3-容器化>3. 容器化</h3>
-<h2 id=五底层优化>五、底层优化</h2>
-<h3 id=1-网络>1. 网络</h3>
+<h3 id="3-容器化">3. 容器化</h3>
+<h2 id="五底层优化">五、底层优化</h2>
+<h3 id="1-网络">1. 网络</h3>
 <ul>
 <li>连接复用</li>
 </ul>
@@ -447,7 +489,7 @@
 <blockquote>
 <p>在特定的场景需要自己实现网络底层来达到更优的性能。例如网关，单个服务一般要承载10w+的长连接，如果使用go原有的网络库，每个连接创建一个goroutine来处理io，大量的goroutine将成为系统瓶颈。</p>
 </blockquote>
-<h3 id=2-内存>2. 内存</h3>
+<h3 id="2-内存">2. 内存</h3>
 <ul>
 <li>预分配</li>
 </ul>
@@ -466,84 +508,122 @@
 <blockquote>
 <p>了解go内存逃逸分析，有助于区分堆内存和栈内存，减少堆内存的分配可以降低内存分配带来的消耗，也可以降低gc压力。</p>
 </blockquote>
-<h3 id=3-锁>3. 锁</h3>
+<h3 id="3-锁">3. 锁</h3>
 <blockquote>
 <p>锁粒度拆分尽量小，避免锁定一个超长执行时间的逻辑。</p>
 </blockquote>
 <blockquote>
 <p>可以使用原子操作（atomic包）代替锁的，尽量使用原子操作。</p>
 </blockquote>
+
+    </div>
+
+    <div class="post-copyright">
+  <p class="copyright-item">
+    <span class="item-title">Author</span>
+    <span class="item-content">刘玮</span>
+  </p>
+  <p class="copyright-item">
+    <span class="item-title">LastMod</span>
+    <span class="item-content">
+        2022-02-12
+        
+    </span>
+  </p>
+  
+  
 </div>
-<div class=post-copyright>
-<p class=copyright-item>
-<span class=item-title>Author</span>
-<span class=item-content>刘玮</span>
-</p>
-<p class=copyright-item>
-<span class=item-title>LastMod</span>
-<span class=item-content>
-2022-02-12
-</span>
-</p>
+<footer class="post-footer">
+      <div class="post-tags">
+          <a href="/tags/go/">Go</a>
+          </div>
+      <nav class="post-nav">
+        <a class="prev" href="/post/go-hang-panic/">
+            <i class="iconfont icon-left"></i>
+            <span class="prev-text nav-default">记一次goroutine被hang的排查经历</span>
+            <span class="prev-text nav-mobile">Prev</span>
+          </a>
+        <a class="next" href="/post/go-callvis/">
+            <span class="next-text nav-default">Go代码调用链路可视化工具—go-callvis</span>
+            <span class="next-text nav-mobile">Next</span>
+            <i class="iconfont icon-right"></i>
+          </a>
+      </nav>
+    </footer>
+  </article>
+        </div>
+        
+
+  
+
+  
+
+      </div>
+    </main>
+
+    <footer id="footer" class="footer">
+      <div class="social-links">
+      <a href="mailto:skyscar@126.com" class="iconfont icon-email" title="email"></a>
+      <a href="https://github.com/erberry" class="iconfont icon-github" title="github"></a>
+      <a href="https://www.zhihu.com/people/liu-wei-54-20" class="iconfont icon-zhihu" title="zhihu"></a>
+      <a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&amp;action=getalbum&amp;album_id=2008233094889144321&amp;scene=173&amp;subscene=0&amp;sessionid=1644638615&amp;enterid=1644638666&amp;from_msgid=2247484265&amp;from_itemidx=1&amp;count=3&amp;nolastread=1#wechat_redirect" class="iconfont icon-wechat" title="wechat"></a>
+  <a href="https://erberry.github.io/index.xml" type="application/rss+xml" class="iconfont icon-rss" title="rss"></a>
 </div>
-<footer class=post-footer>
-<div class=post-tags>
-<a href=/tags/go/>Go</a>
+
+<div class="copyright">
+  <span class="power-by">
+    Powered by <a class="hexo-link" href="https://gohugo.io">Hugo</a>
+  </span>
+  <span class="division">|</span>
+  <span class="theme-info">
+    Theme - 
+    <a class="theme-link" href="https://github.com/olOwOlo/hugo-theme-even">Even</a>
+  </span>
+
+  <div class="busuanzi-footer">
+    <span id="busuanzi_container_site_pv"> site pv: <span id="busuanzi_value_site_pv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+      <span class="division">|</span>
+    <span id="busuanzi_container_site_uv"> site uv: <span id="busuanzi_value_site_uv"><img src="/img/spinner.svg" alt="spinner.svg"/></span> </span>
+  </div>
+
+  <span class="copyright-year">
+    &copy; 
+    2022<span class="heart"><i class="iconfont icon-heart"></i></span><span>刘玮</span>
+  </span>
 </div>
-<nav class=post-nav>
-<a class=prev href=/post/go-hang-panic/>
-<i class="iconfont icon-left"></i>
-<span class="prev-text nav-default">记一次goroutine被hang的排查经历</span>
-<span class="prev-text nav-mobile">Prev</span>
-</a>
-<a class=next href=/post/go-callvis/>
-<span class="next-text nav-default">Go代码调用链路可视化工具—go-callvis</span>
-<span class="next-text nav-mobile">Next</span>
-<i class="iconfont icon-right"></i>
-</a>
-</nav>
-</footer>
-</article>
-</div>
-</div>
-</main>
-<footer id=footer class=footer>
-<div class=social-links>
-<a href=mailto:skyscar@126.com class="iconfont icon-email" title=email></a>
-<a href=https://github.com/erberry class="iconfont icon-github" title=github></a>
-<a href=https://www.zhihu.com/people/liu-wei-54-20 class="iconfont icon-zhihu" title=zhihu></a>
-<a href="https://mp.weixin.qq.com/mp/appmsgalbum?__biz=Mzk0MDI2Nzc3Mw==&action=getalbum&album_id=2008233094889144321&scene=173&subscene=0&sessionid=1644638615&enterid=1644638666&from_msgid=2247484265&from_itemidx=1&count=3&nolastread=1#wechat_redirect" class="iconfont icon-wechat" title=wechat></a>
-<a href=https://erberry.github.io/index.xml type=application/rss+xml class="iconfont icon-rss" title=rss></a>
-</div>
-<div class=copyright>
-<span class=power-by>
-Powered by <a class=hexo-link href=https://gohugo.io>Hugo</a>
-</span>
-<span class=division>|</span>
-<span class=theme-info>
-Theme -
-<a class=theme-link href=https://github.com/olOwOlo/hugo-theme-even>Even</a>
-</span>
-<div class=busuanzi-footer>
-<span id=busuanzi_container_site_pv> site pv: <span id=busuanzi_value_site_pv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
-<span class=division>|</span>
-<span id=busuanzi_container_site_uv> site uv: <span id=busuanzi_value_site_uv><img src=/img/spinner.svg alt=spinner.svg></span> </span>
-</div>
-<span class=copyright-year>
-&copy;
-2022<span class=heart><i class="iconfont icon-heart"></i></span><span>刘玮</span>
-</span>
-</div>
-</footer>
-<div class=back-to-top id=back-to-top>
-<i class="iconfont icon-up"></i>
-</div>
-</div>
-<script src=https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin=anonymous></script>
-<script src=https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin=anonymous></script>
-<script type=text/javascript src=/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js></script>
-<script type=application/javascript>var doNotTrack=!1;doNotTrack||(window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)},ga.l=+new Date,ga('create','UA-191525181-1','auto'),ga('set','anonymizeIp',!0),ga('send','pageview'))</script>
-<script async src=https://www.google-analytics.com/analytics.js></script>
+
+    </footer>
+
+    <div class="back-to-top" id="back-to-top">
+      <i class="iconfont icon-up"></i>
+    </div>
+  </div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/jquery@3.2.1/dist/jquery.min.js" integrity="sha256-hwg4gsxgFZhOsEEamdOYGBf13FyQuiTwlAQgxVSNgt4=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/slideout@1.0.1/dist/slideout.min.js" integrity="sha256-t+zJ/g8/KXIJMjSVQdnibt4dlaDxc9zXr/9oNPeWqdg=" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fancyapps/fancybox@3.1.20/dist/jquery.fancybox.min.js" integrity="sha256-XVLffZaxoWfGUEbdzuLi7pwaUJv1cecsQJQqGLe7axY=" crossorigin="anonymous"></script>
+
+
+
+<script type="text/javascript" src="/js/main.min.c99b103c33d1539acf3025e1913697534542c4a5aa5af0ccc20475ed2863603b.js"></script>
+
+
+<script type="application/javascript">
+var doNotTrack = false;
+if (!doNotTrack) {
+	window.ga=window.ga||function(){(ga.q=ga.q||[]).push(arguments)};ga.l=+new Date;
+	ga('create', 'UA-191525181-1', 'auto');
+	ga('set', 'anonymizeIp', true);
+	ga('send', 'pageview');
+}
+</script>
+<script async src='https://www.google-analytics.com/analytics.js'></script>
+
+
+
+
+
+
+
 </body>
 </html>
