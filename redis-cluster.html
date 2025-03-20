@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <!-- 添加 SEO 信息 -->
+     <meta name="description" content="">
+     <meta name="keywords" content="redis,cluster">
+     <title></title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+    <script src="https://cdn.bootcdn.net/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --accent-color: #8b5cf6;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-card: #ffffff;
+            --border-color: #e5e7eb;
+            --highlight-bg: #f3f4f6;
+        }
+
+        .dark {
+            --primary-color: #60a5fa;
+            --secondary-color: #34d399;
+            --accent-color: #a78bfa;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --bg-card: #1f2937;
+            --border-color: #374151;
+            --highlight-bg: #374151;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', Tahoma, Arial, Roboto, "Droid Sans", "Helvetica Neue", "Droid Sans Fallback", "Heiti SC", "Hiragino Sans GB", Simsun, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Noto Serif SC', serif;
+            font-weight: 700;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            line-height: 1.4;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .highlight {
+            background-color: var(--highlight-bg);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .first-letter::first-letter {
+            font-size: 3.5em;
+            float: left;
+            line-height: 0.8;
+            margin-right: 0.1em;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .section-divider {
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 2px;
+            margin: 2rem 0;
+        }
+
+        .memory-bar {
+            height: 2rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            background-color: var(--highlight-bg);
+        }
+
+        .memory-segment {
+            height: 100%;
+            display: inline-block;
+            transition: width 1s ease-in-out;
+        }
+
+        .toggle-container {
+            width: 60px;
+            height: 30px;
+            border-radius: 15px;
+            background-color: var(--bg-secondary);
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-circle {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: var(--bg-primary);
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+        }
+
+        .dark .toggle-circle {
+            transform: translateX(30px);
+        }
+
+        .mermaid {
+            background-color: var(--bg-card);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        @media (max-width: 640px) {
+            .memory-bar {
+                height: 1.5rem;
+            }
+        }
+        /* 导航栏样式 */
+        .navbar {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .light-mode .navbar {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .dark-mode .navbar {
+            background-color: rgba(17, 24, 39, 0.8);
+        }
+
+        /* 主题切换按钮 */
+        .theme-toggle {
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(30deg);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col">
+        <!-- 导航栏 -->
+        <nav class="navbar fixed top-0 left-0 right-0 z-50 py-4 px-6 flex justify-between items-center" style="background-color: var(--bg-primary);">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-database text-2xl" style="color: var(--primary-color);"></i>
+                <h1 class="text-xl font-bold serif">erberry的个人博客</h1>
+            </div>
+            <div class="flex items-center space-x-6">
+                <a href="index.html" class="hidden md:block hover:text-primary-color transition-all"><i class="fas fa-home mr-2"></i>首页</a>
+                <div class="toggle-container" id="theme-toggle">
+                    <div class="toggle-circle">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero 区域 -->
+        <header class="pt-32 pb-16 px-4 md:px-8 lg:px-16 max-w-7xl mx-auto">
+            <div class="text-center mb-12">
+                <h1 class="hero-title gradient-text mb-6">Redis Cluster 的架构设计及数据在线迁移</h1>
+                <p class="hero-subtitle text-center max-w-4xl mx-auto" style="color: var(--text-secondary);">
+                    深入解析Redis集群的工作原理、节点通信机制及数据迁移策略
+                </p>
+                <div class="flex justify-center mt-8 space-x-4">
+                    <span class="px-3 py-1 rounded-full text-sm" style="background-color: var(--highlight-bg); color: var(--primary-color);">
+                        <i class="fas fa-server mr-2"></i>分布式系统
+                    </span>
+                    <span class="px-3 py-1 rounded-full text-sm" style="background-color: var(--highlight-bg); color: var(--secondary-color);">
+                        <i class="fas fa-database mr-2"></i>Redis
+                    </span>
+                    <span class="px-3 py-1 rounded-full text-sm" style="background-color: var(--highlight-bg); color: var(--accent-color);">
+                        <i class="fas fa-network-wired mr-2"></i>集群架构
+                    </span>
+                </div>
+            </div>
+            
+            <div class="section-divider w-24 mx-auto"></div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="px-4 md:px-8 lg:px-16 max-w-7xl mx-auto pb-20">
+            <!-- 概述部分 -->
+            <section class="mb-16">
+                <div class="card p-8 mb-12">
+                    <h2 class="text-2xl md:text-3xl font-bold mb-6">Redis Cluster 概述</h2>
+                    <p class="first-letter mb-6">
+                        Redis Cluster是Redis的分布式实现，通过分片（Sharding）将数据分散到多个节点上，实现水平扩展。
+                        它不仅提供了数据分片能力，还支持高可用性和在线数据迁移，使得集群可以在不停机的情况下进行扩容和缩容。
+                    </p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-puzzle-piece mr-2" style="color: var(--primary-color);"></i>分片机制</h3>
+                            <p>Redis Cluster将键空间分为16384个哈希槽(slot)，每个键通过CRC16算法计算后映射到不同的槽。集群中的每个节点负责一部分槽的数据存储。</p>
+                        </div>
+                        
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-network-wired mr-2" style="color: var(--secondary-color);"></i>去中心化架构</h3>
+                            <p>Redis Cluster采用去中心化架构，所有节点互联并使用Gossip协议进行信息同步，无需依赖中心协调节点。</p>
+                        </div>
+                        
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-exchange-alt mr-2" style="color: var(--accent-color);"></i>在线迁移</h3>
+                            <p>支持在不停机的情况下进行数据迁移，通过特殊的重定向机制确保迁移过程中的请求正确处理。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 分片机制可视化 -->
+                <div class="mb-12">
+                    <h3 class="text-2xl font-bold mb-6">分片机制</h3>
+                    <div class="card p-6">
+                        <p class="mb-4">Redis Cluster将key空间分为16384个slot，每个key通过crc16算法计算后映射到不同的slot。node是cluster中的节点或者分片，每个node负责一段slot区间。</p>
+                        
+                        <div class="mermaid">
+                            graph LR
+                                Client[客户端] -->|"CRC16(key) mod 16384"| Slots[哈希槽空间]
+                                Slots -->|0-5460| Node1[节点1]
+                                Slots -->|5461-13652| Node2[节点2]
+                                Slots -->|13653-16383| Node3[节点3]
+                                
+                                style Client fill:#f9f9f9,stroke:#333,stroke-width:2px
+                                style Slots fill:#e1f5fe,stroke:#333,stroke-width:2px
+                                style Node1 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                                style Node2 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                                style Node3 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                        </div>
+                        
+                        <div class="memory-bar mt-8 mb-2">
+                            <div class="memory-segment" style="width: 33.3%; background-color: var(--primary-color);"></div>
+                            <div class="memory-segment" style="width: 50%; background-color: var(--secondary-color);"></div>
+                            <div class="memory-segment" style="width: 16.7%; background-color: var(--accent-color);"></div>
+                        </div>
+                        <div class="flex justify-between text-sm" style="color: var(--text-secondary);">
+                            <span>0</span>
+                            <span>5460</span>
+                            <span>13652</span>
+                            <span>16383</span>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 节点属性部分 -->
+            <section class="mb-16">
+                <h2 class="text-2xl md:text-3xl font-bold mb-8">节点属性</h2>
+                <p class="mb-6">每个节点本地都缓存了集群中其他节点的NODE信息，包括了以下信息：</p>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                    <div class="card p-6">
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <i class="fas fa-fingerprint mt-1 mr-3" style="color: var(--primary-color);"></i>
+                                <span><strong>node id</strong> - 全局唯一的节点标识符</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-network-wired mt-1 mr-3" style="color: var(--primary-color);"></i>
+                                <span><strong>IP PORT</strong> - 节点的网络地址和端口</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-info-circle mt-1 mr-3" style="color: var(--primary-color);"></i>
+                                <span><strong>节点状态</strong> - 当前节点、主节点、副本节点、失败的节点</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-crown mt-1 mr-3" style="color: var(--primary-color);"></i>
+                                <span><strong>Master</strong> - 如果是副本节点，这里是主节点的id；如果是主节点，这里是 -</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-paper-plane mt-1 mr-3" style="color: var(--primary-color);"></i>
+                                <span><strong>ping-sent</strong> - 当前已发出但未收到回复的PING的开始时间戳（毫秒）</span>
+                            </li>
+                        </ul>
+                    </div>
+                    
+                    <div class="card p-6">
+                        <ul class="space-y-3">
+                            <li class="flex items-start">
+                                <i class="fas fa-reply mt-1 mr-3" style="color: var(--secondary-color);"></i>
+                                <span><strong>pong-recv</strong> - 最近一次收到PONG的时间戳（毫秒）</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-code-branch mt-1 mr-3" style="color: var(--secondary-color);"></i>
+                                <span><strong>config-epoch</strong> - 当前节点的配置版本号</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-link mt-1 mr-3" style="color: var(--secondary-color);"></i>
+                                <span><strong>link-state</strong> - 与其他节点进行的连接的状态</span>
+                            </li>
+                            <li class="flex items-start">
+                                <i class="fas fa-th mt-1 mr-3" style="color: var(--secondary-color);"></i>
+                                <span><strong>slot</strong> - 该节点负责的slot，可以是slot范围，也可以是单个slot</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                
+                <!-- 节点信息示例 -->
+                <div class="highlight p-6 mb-8 overflow-x-auto">
+                    <h3 class="text-xl font-bold mb-4">节点信息示例</h3>
+                    <pre class="text-sm" style="color: var(--text-primary);">1850b1a8fb62ff9d2aaff026e47a2d6dab64f4e0 10.183.8.201:6379@16379 master - 0 1733457041570 5 connected 0-5460 13653-16383
+d9c80e7b7e30a41ef24978e2a879204f4a93fe8d 10.183.10.214:6379@16379 slave 525efc1a947590ccc1b924a344ec487d50fa2177 0 1733457041569 4 connected
+af04998e85bed3754ab2b36e09a6a70e75e0dd85 10.183.9.249:6379@16379 slave 1850b1a8fb62ff9d2aaff026e47a2d6dab64f4e0 0 1733457041065 5 connected
+525efc1a947590ccc1b924a344ec487d50fa2177 10.183.9.254:6379@16379 myself,master - 0 1733457041000 4 connected 5461-13652</pre>
+                </div>
+            </section>
+            
+            <!-- 集群通信部分 -->
+            <section class="mb-16">
+                <h2 class="text-2xl md:text-3xl font-bold mb-8">集群通信</h2>
+                
+                <div class="card p-8 mb-8">
+                    <p class="mb-6">每个节点除了数据端口之外，还会监听一个管理端口，用来接收节点之间的通信，一般是数据端口加10000（16379）</p>
+                    
+                    <div class="mermaid">
+                        graph TB
+                            subgraph "节点间通信"
+                                A[节点A<br>6379/16379] ---|TCP连接| B[节点B<br>6379/16379]
+                                B ---|TCP连接| C[节点C<br>6379/16379]
+                                C ---|TCP连接| A
+                                A -.->|PING| B
+                                B -.->|PONG| A
+                                B -.->|PING| C
+                                C -.->|PONG| B
+                                C -.->|PING| A
+                                A -.->|PONG| C
+                            end
+                            
+                            style A fill:#f3e5f5,stroke:#333,stroke-width:2px
+                            style B fill:#e3f2fd,stroke:#333,stroke-width:2px
+                            style C fill:#e8f5e9,stroke:#333,stroke-width:2px
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-8">
+                        <div>
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-project-diagram mr-2" style="color: var(--primary-color);"></i>集群拓扑</h3>
+                            <p>每个节点都与集群中的其他节点使用TCP进行互联，一条连向对方的连接、一条对方连过来的，所以每个节点会有2×(N-1)条连接。</p>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-heartbeat mr-2" style="color: var(--secondary-color);"></i>节点探活</h3>
+                            <p>节点之间都在TCP连接上进行PING PONG来探测对方，在把对方标记为不可达之前，会尝试建立新连接进行探活。节点之间使用gossip协议进行信息同步。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 节点互信部分 -->
+            <section class="mb-16">
+                <h2 class="text-2xl md:text-3xl font-bold mb-8">节点互信</h2>
+                
+                <div class="card p-8">
+                    <p class="mb-6">cluster默认其他节点为未识别的节点，需要使用MEET命令将本节点加入集群中（CLUSTER MEET target-ip target-port）</p>
+                    
+                    <div class="mermaid">
+                        graph LR
+                            A[节点A] --- B[节点B]
+                            B --- C[节点C]
+                            A --- C
+                            D[新节点D] -.->|CLUSTER MEET A-ip A-port| A
+                            A -.->|MEET消息| D
+                            A -.->|Gossip协议| B & C
+                            
+                            style A fill:#e3f2fd,stroke:#333,stroke-width:2px
+                            style B fill:#e3f2fd,stroke:#333,stroke-width:2px
+                            style C fill:#e3f2fd,stroke:#333,stroke-width:2px
+                            style D fill:#f3e5f5,stroke:#333,stroke-width:2px,stroke-dasharray: 5 5
+                    </div>
+                    
+                    <div class="highlight mt-8 p-6">
+                        <h3 class="text-xl font-bold mb-3"><i class="fas fa-lightbulb mr-2" style="color: var(--accent-color);"></i>节点加入示例</h3>
+                        <p>例如当新增一个节点D时，可以对节点D使用命令 <code>CLUSTER MEET A-ip A-port</code>。这时D节点将会和A节点建立连接，并发送MEET消息，A节点将D节点标记为合法节点，并使用gossip协议向B、C节点进行信息同步。</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 命令重定向部分 -->
+            <section class="mb-16">
+                <h2 class="text-2xl md:text-3xl font-bold mb-8">命令重定向</h2>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    <div class="card p-6">
+                        <h3 class="text-xl font-bold mb-4"><i class="fas fa-exchange-alt mr-2" style="color: var(--primary-color);"></i>MOVED重定向</h3>
+                        <p class="mb-4">client可以向cluster中的任意节点发送命令，当节点发现key不在当前节点，会返回一个moved错误，并附带正确的节点信息，client按照返回的节点信息进行重试。</p>
+                        <p>client可以在收到moved错误后，向任意节点请求最新的节点拓扑信息。</p>
+                    </div>
+                    
+                    <div class="card p-6">
+                        <h3 class="text-xl font-bold mb-4"><i class="fas fa-random mr-2" style="color: var(--secondary-color);"></i>ASK重定向</h3>
+                        <p class="mb-4">在SLOT迁移中，源节点发现key不在当前NODE时，会返回ask和目标节点信息，通知client去目标节点访问。</p>
+                        <p>ask是迁移过程中的临时重定向，收到ask后，client只是当次请求向新NODE发送，且不更新本地&lt;SLOT,NODE&gt;对应关系表，后续的命令仍然向源节点发送。</p>
+                    </div>
+                </div>
+                
+                <div class="mermaid">
+                    sequenceDiagram
+                        participant Client
+                        participant NodeA as 源节点A
+                        participant NodeB as 目标节点B
+                        
+                        Client->>NodeA: GET key1
+                        Note over NodeA: key1不在当前节点
+                        NodeA-->>Client: ASK重定向到NodeB
+                        Client->>NodeB: ASKING<br>GET key1
+                        NodeB-->>Client: value1
+                        Client->>NodeA: GET key2
+                        Note over NodeA: key2在当前节点
+                        NodeA-->>Client: value2
+                        
+                        Note over Client,NodeB: SLOT迁移完成后
+                        Client->>NodeA: GET key3
+                        NodeA-->>Client: MOVED重定向到NodeB
+                        Note over Client: 更新本地拓扑信息
+                        Client->>NodeB: GET key3
+                        NodeB-->>Client: value3
+                </div>
+                
+                <div class="highlight mt-8 p-6">
+                    <h3 class="text-xl font-bold mb-3"><i class="fas fa-question-circle mr-2" style="color: var(--accent-color);"></i>为什么需要ASK重定向？</h3>
+                    <p>moved同样有重定向的作用，为什么新增一种ask重定向？因为ask是迁移过程中的临时重定向，收到ask后，client只是当次请求向新NODE发送，且不更新本地&lt;SLOT,NODE&gt;对应关系表，后续的命令仍然向源节点发送。SLOT迁移完成后，才会下发moved，client会更新本地&lt;SLOT,NODE&gt;对应关系表，后续的命令会发送给新NODE。</p>
+                </div>
+            </section>
+            
+            <!-- SLOT在线迁移部分 -->
+            <section class="mb-16">
+                <h2 class="text-2xl md:text-3xl font-bold mb-8">SLOT在线迁移</h2>
+                
+                <div class="card p-8 mb-8">
+                    <p class="mb-6">在线迁移slot的步骤：要迁入的节点称为"目标节点"，迁出的节点称为"源节点"：</p>
+                    
+                    <ol class="space-y-6 mb-8">
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full mr-4 text-white font-bold" style="background-color: var(--primary-color);">1</span>
+                            <div>
+                                <p class="font-bold mb-2">在目标节点上将哈希槽设置为导入状态</p>
+                                <div class="highlight p-3 text-sm">
+                                    <code>CLUSTER SETSLOT &lt;slot&gt; IMPORTING &lt;source-node-id&gt;</code>
+                                </div>
+                            </div>
+                        </li>
+                        
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full mr-4 text-white font-bold" style="background-color: var(--primary-color);">2</span>
+                            <div>
+                                <p class="font-bold mb-2">在源节点上将哈希槽设置为迁移状态</p>
+                                <div class="highlight p-3 text-sm">
+                                    <code>CLUSTER SETSLOT &lt;slot&gt; MIGRATING &lt;destination-node-id&gt;</code>
+                                </div>
+                            </div>
+                        </li>
+                        
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full mr-4 text-white font-bold" style="background-color: var(--primary-color);">3</span>
+                            <div>
+                                <p class="font-bold mb-2">从源节点获取键并迁移到目标节点</p>
+                                <div class="highlight p-3 text-sm mb-2">
+                                    <code>CLUSTER GETKEYSINSLOT slot count</code>
+                                </div>
+                                <div class="highlight p-3 text-sm">
+                                    <code>MIGRATE host port destination-db timeout [KEYS key [key ...]]</code>
+                                </div>
+                            </div>
+                        </li>
+                        
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full mr-4 text-white font-bold" style="background-color: var(--primary-color);">4</span>
+                            <div>
+                                <p class="font-bold mb-2">在目标节点上更新槽所属信息</p>
+                                <div class="highlight p-3 text-sm">
+                                    <code>CLUSTER SETSLOT &lt;slot&gt; NODE &lt;destination-node-id&gt;</code>
+                                </div>
+                            </div>
+                        </li>
+                        
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full mr-4 text-white font-bold" style="background-color: var(--primary-color);">5</span>
+                            <div>
+                                <p class="font-bold mb-2">在源节点上更新槽所属信息</p>
+                                <div class="highlight p-3 text-sm">
+                                    <code>CLUSTER SETSLOT &lt;slot&gt; NODE &lt;destination-node-id&gt;</code>
+                                </div>
+                                <p class="mt-2 text-sm">清除NODE的MIGRATING状态，并更新SLOT所属信息。</p>
+                            </div>
+                        </li>
+                        
+                        <li class="flex items-start">
+                            <span class="flex-shrink-0 flex items-center justify-center w-8 h-8 rounded-full mr-4 text-white font-bold" style="background-color: var(--primary-color);">6</span>
+                            <div>
+                                <p class="font-bold mb-2">（可选）通知其他主节点</p>
+                                <div class="highlight p-3 text-sm">
+                                    <code>CLUSTER SETSLOT &lt;slot&gt; NODE &lt;destination-node-id&gt;</code>
+                                </div>
+                                <p class="mt-2 text-sm">让其他节点尽快知道SLOT所属的更新。可选步骤，信息会通过gossip协议在集群中传播。</p>
+                            </div>
+                        </li>
+                    </ol>
+                    
+                    <div class="mermaid">
+                        graph TB
+                            subgraph "迁移过程"
+                                A[源节点] -->|1. 设置MIGRATING| A1[源节点<br>MIGRATING状态]
+                                B[目标节点] -->|1. 设置IMPORTING| B1[目标节点<br>IMPORTING状态]
+                                A1 -->|2. GETKEYSINSLOT| A2[获取key列表]
+                                A2 -->|3. MIGRATE| B1
+                                A1 -->|4. 更新SLOT所属| A3[源节点<br>SLOT更新]
+                                B1 -->|4. 更新SLOT所属| B2[目标节点<br>SLOT更新]
+                            end
+                            
+                            style A fill:#f3e5f5,stroke:#333,stroke-width:2px
+                            style B fill:#e3f2fd,stroke:#333,stroke-width:2px
+                            style A1 fill:#f3e5f5,stroke:#333,stroke-width:2px
+                            style A2 fill:#f3e5f5,stroke:#333,stroke-width:2px
+                            style A3 fill:#f3e5f5,stroke:#333,stroke-width:2px
+                            style B1 fill:#e3f2fd,stroke:#333,stroke-width:2px
+                            style B2 fill:#e3f2fd,stroke:#333,stroke-width:2px
+                    </div>
+                    
+                    <div class="highlight mt-8 p-6">
+                        <h3 class="text-xl font-bold mb-3"><i class="fas fa-tools mr-2" style="color: var(--accent-color);"></i>自动迁移工具</h3>
+                        <p>还可以使用redis-cli工具的reshard命令，只需要输入源节点、目标节点、slot，它会按步骤自动执行以上命令。</p>
+                    </div>
+                </div>
+                
+                <!-- 分步讲解 -->
+                <div class="card p-8">
+                    <h3 class="text-xl font-bold mb-6">分步讲解</h3>
+                    
+                    <div class="space-y-8">
+                        <div>
+                            <h4 class="text-lg font-bold mb-3">第1步：准备目标节点</h4>
+                            <p>确保目标节点在"源节点配置为重定向"之前已准备好接受 ASK 重定向。这时目标节点会接收属于待迁移SLOT的key的命令，但需要在正常的命令前加上ASKING指令，确保这条命令是由源节点ask重定向的；如果没有带ASKING指令，会返回一个moved错误并附带源节点信息，通知client先去请求源节点。</p>
+                        </div>
+                        
+                        <div>
+                            <h4 class="text-lg font-bold mb-3">第2步：准备源节点</h4>
+                            <p>将源节点设置为迁移中，这时源节点负责接收所有属于迁移SLOT的key的命令，当key在源节点时，进行命令执行；当key不在源节点，将向client返回ask错误并附带目标节点信息，client在收到ask后，会使用附带的目标节点信息进行命令重试（除了正常的命令，还需要在前面增加一条ASKING指令，来告知目标节点，这是一条ask重定向的命令）</p>
+                        </div>
+                        
+                        <div class="highlight p-6">
+                            <h4 class="text-lg font-bold mb-3">IMPORTING和MIGRATING状态的作用</h4>
+                            <p>IMPORTING和MIGRATING是为了先将目标节点和源节点设置为迁移中状态。key迁移的过程中，一定会是部分key在源节点、部分key在目标节点。这时集群的NODE信息中，迁移中的SLOT仍然被源节点负责。当源节点发现key不在当前节点时，会下发ask指令通知client去目标节点重试。</p>
+                            <p class="mt-3">目标节点只能接受来自ask重定向的命令（需要ASKING指令），证明client先从源节点获取了ask重定向。这样就保证了迁移过程中的命令正确执行。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 客户端连接部分 -->
+            <section class="mb-16">
+                <h2 class="text-2xl md:text-3xl font-bold mb-8">客户端连接</h2>
+                
+                <div class="card p-8 mb-8">
+                    <p class="mb-6">Redis Cluster客户端需要处理重定向和集群拓扑变更，主要有两种连接模式：</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-random mr-2" style="color: var(--primary-color);"></i>直连模式</h3>
+                            <ul class="space-y-3 ml-6 list-disc">
+                                <li>客户端直接连接集群中的每个节点</li>
+                                <li>客户端自己维护槽位与节点的映射关系</li>
+                                <li>客户端自行处理重定向逻辑</li>
+                                <li>适合长连接场景，性能更好</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-server mr-2" style="color: var(--secondary-color);"></i>代理模式</h3>
+                            <ul class="space-y-3 ml-6 list-disc">
+                                <li>客户端连接到代理服务器（如Twemproxy、Codis）</li>
+                                <li>代理服务器维护槽位与节点的映射关系</li>
+                                <li>代理服务器处理重定向逻辑</li>
+                                <li>适合短连接场景，对客户端友好</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="mermaid mt-8">
+                        graph TB
+                            subgraph "直连模式"
+                                C1[客户端] -->|连接| N1[节点1]
+                                C1 -->|连接| N2[节点2]
+                                C1 -->|连接| N3[节点3]
+                            end
+                            
+                            subgraph "代理模式"
+                                C2[客户端] -->|连接| P[代理服务器]
+                                P -->|连接| N4[节点1]
+                                P -->|连接| N5[节点2]
+                                P -->|连接| N6[节点3]
+                            end
+                            
+                            style C1 fill:#f9f9f9,stroke:#333,stroke-width:2px
+                            style C2 fill:#f9f9f9,stroke:#333,stroke-width:2px
+                            style P fill:#e1f5fe,stroke:#333,stroke-width:2px
+                            style N1 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                            style N2 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                            style N3 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                            style N4 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                            style N5 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                            style N6 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                    </div>
+                </div>
+                
+                <div class="card p-8">
+                    <h3 class="text-xl font-bold mb-6">客户端实现要点</h3>
+                    
+                    <div class="space-y-6">
+                        <div>
+                            <h4 class="text-lg font-bold mb-2"><i class="fas fa-map mr-2" style="color: var(--primary-color);"></i>拓扑发现</h4>
+                            <p>客户端可以通过 <code>CLUSTER SLOTS</code> 或 <code>CLUSTER NODES</code> 命令获取集群拓扑信息，并定期刷新。</p>
+                        </div>
+                        
+                        <div>
+                            <h4 class="text-lg font-bold mb-2"><i class="fas fa-sync mr-2" style="color: var(--primary-color);"></i>重定向处理</h4>
+                            <p>客户端需要处理 MOVED 和 ASK 重定向，MOVED 重定向后需要更新本地槽位映射，ASK 重定向则是临时性的。</p>
+                        </div>
+                        
+                        <div>
+                            <h4 class="text-lg font-bold mb-2"><i class="fas fa-random mr-2" style="color: var(--primary-color);"></i>连接池管理</h4>
+                            <p>为每个节点维护连接池，根据键所在的槽位选择正确的节点连接。</p>
+                        </div>
+                        
+                        <div>
+                            <h4 class="text-lg font-bold mb-2"><i class="fas fa-exclamation-triangle mr-2" style="color: var(--primary-color);"></i>错误处理</h4>
+                            <p>处理节点故障、网络异常等情况，实现自动重试和故障转移。</p>
+                        </div>
+                    </div>
+                    
+                    
+                </div>
+            </section>
+            
+            <!-- 多key操作部分 -->
+            <section class="mb-16">
+                <h2 class="text-2xl md:text-3xl font-bold mb-8">多key操作</h2>
+                
+                <div class="card p-8">
+                    <p class="mb-6">Redis Cluster对多key操作有一定限制，因为不同的key可能分布在不同的节点上。</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-exclamation-circle mr-2" style="color: var(--primary-color);"></i>多key操作限制</h3>
+                            <p class="mb-4">在Redis Cluster中，多key操作（如MGET、MSET、事务等）只有在所有key都位于同一个槽时才能正常执行。</p>
+                            <p>如果多个key分布在不同的槽中，Redis会返回错误：<code>CROSSSLOT Keys in request don't hash to the same slot</code></p>
+                        </div>
+                        
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-key mr-2" style="color: var(--secondary-color);"></i>哈希标签</h3>
+                            <p class="mb-4">Redis提供了哈希标签（Hash Tags）机制，可以强制多个key映射到同一个槽中。</p>
+                            <p>当key包含 <code>{...}</code> 时，只有花括号内的部分会被用来计算哈希值。例如：<code>user:{123}:profile</code> 和 <code>user:{123}:orders</code> 会被映射到同一个槽。</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mermaid">
+                        graph LR
+                            K1[user:123:profile] -->|CRC16| S1[不同槽]
+                            K2[user:456:profile] -->|CRC16| S2[不同槽]
+                            K3["user:{123}:profile"] -->|"CRC16 {123}"| S3[相同槽]
+                            K4["user:{123}:orders"] -->|"CRC16 {123}"| S3
+                            
+                            style K1 fill:#f9f9f9,stroke:#333,stroke-width:2px
+                            style K2 fill:#f9f9f9,stroke:#333,stroke-width:2px
+                            style K3 fill:#e1f5fe,stroke:#333,stroke-width:2px
+                            style K4 fill:#e1f5fe,stroke:#333,stroke-width:2px
+                            style S1 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                            style S2 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                            style S3 fill:#e8f5e9,stroke:#333,stroke-width:2px
+                    </div>
+                    
+                    <div class="space-y-6 mt-8">
+                        <div>
+                            <h4 class="text-lg font-bold mb-2">客户端多key操作解决方案</h4>
+                            <ol class="space-y-3 ml-6 list-decimal">
+                                <li>使用哈希标签确保相关键在同一个槽</li>
+                                <li>客户端分批发送命令到不同节点并合并结果</li>
+                                <li>使用Lua脚本（脚本中的所有key必须在同一个节点）</li>
+                            </ol>
+                        </div>
+                        
+            
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 总结部分 -->
+            <section class="mb-16">
+                <h2 class="text-2xl md:text-3xl font-bold mb-8">总结</h2>
+                
+                <div class="card p-8">
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-plus-circle mr-2" style="color: var(--primary-color);"></i>优势</h3>
+                            <ul class="space-y-2 ml-6 list-disc">
+                                <li>水平扩展能力强</li>
+                                <li>去中心化架构，无单点故障</li>
+                                <li>支持在线数据迁移</li>
+                                <li>自动故障检测和故障转移</li>
+                                <li>高性能和高可用性</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-minus-circle mr-2" style="color: var(--secondary-color);"></i>局限性</h3>
+                            <ul class="space-y-2 ml-6 list-disc">
+                                <li>多key操作受限</li>
+                                <li>客户端复杂度增加</li>
+                                <li>数据迁移过程中性能可能下降</li>
+                                <li>节点间通信开销较大</li>
+                                <li>配置管理相对复杂</li>
+                            </ul>
+                        </div>
+                        
+                        <div class="highlight">
+                            <h3 class="text-xl font-bold mb-3"><i class="fas fa-lightbulb mr-2" style="color: var(--accent-color);"></i>最佳实践</h3>
+                            <ul class="space-y-2 ml-6 list-disc">
+                                <li>合理规划槽位分配</li>
+                                <li>使用哈希标签管理相关数据</li>
+                                <li>定期备份和监控集群状态</li>
+                                <li>避免大key和热点key</li>
+                                <li>选择合适的客户端库</li>
+                            </ul>
+                        </div>
+                    </div>
+                    
+                    <div class="highlight p-6 mt-4">
+                        <h3 class="text-xl font-bold mb-4"><i class="fas fa-book mr-2" style="color: var(--primary-color);"></i>核心概念回顾</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <ul class="space-y-3">
+                                    <li><strong>哈希槽(Slot)：</strong> Redis Cluster将键空间分为16384个哈希槽，每个节点负责一部分槽。</li>
+                                    <li><strong>节点通信：</strong> 节点间通过Gossip协议进行信息同步，每个节点都与其他节点建立TCP连接。</li>
+                                    <li><strong>MOVED重定向：</strong> 当键不在当前节点时，返回MOVED错误并指向正确的节点，客户端需要更新拓扑信息。</li>
+                                </ul>
+                            </div>
+                            <div>
+                                <ul class="space-y-3">
+                                    <li><strong>ASK重定向：</strong> 在槽迁移过程中，源节点返回ASK错误指向目标节点，客户端需要发送ASKING命令。</li>
+                                    <li><strong>在线迁移：</strong> 通过IMPORTING和MIGRATING状态，实现不停机的数据迁移。</li>
+                                    <li><strong>哈希标签：</strong> 使用{...}语法强制多个键映射到同一个槽，便于多键操作。</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-8 text-center">
+                        <p class="text-lg">Redis Cluster是一个功能强大的分布式解决方案，通过深入理解其架构设计和工作原理，可以更好地利用它来构建高性能、高可用的分布式缓存系统。</p>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 参考资料部分 -->
+            <section class="mb-16">
+                <h2 class="text-2xl md:text-3xl font-bold mb-8">参考资料</h2>
+                
+                <div class="card p-8">
+                    <ul class="space-y-4">
+                        <li class="flex items-start">
+                            <i class="fas fa-external-link-alt mt-1 mr-3" style="color: var(--primary-color);"></i>
+                            <a href="https://redis.io/docs/management/scaling/" class="hover:underline" target="_blank">Redis官方文档 - Redis Cluster Specification</a>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-external-link-alt mt-1 mr-3" style="color: var(--primary-color);"></i>
+                            <a href="https://redis.io/commands/?group=cluster" class="hover:underline" target="_blank">Redis Cluster命令参考</a>
+                        </li>
+                        <li class="flex items-start">
+                            <i class="fas fa-external-link-alt mt-1 mr-3" style="color: var(--primary-color);"></i>
+                            <a href="https://github.com/redis/go-redis" class="hover:underline" target="_blank">go-redis - Go Redis客户端</a>
+                        </li>
+                    </ul>
+                </div>
+            </section>
+        </main>
+        
+        <!-- 页脚 -->
+        <footer class="py-12" style="background-color: var(--bg-secondary);">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div>
+                        <h3 class="text-lg font-bold mb-4">关于我们</h3>
+                        <p class="text-sm" style="color: var(--text-secondary);">
+                            致力于分享AI与技术领域的前沿知识，让复杂的技术变得简单易懂。
+                        </p>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold mb-4">快速链接</h3>
+                        <ul class="space-y-2 text-sm">
+                            <li><a href="index.html" class="hover:text-primary-color transition-all">首页</a></li>
+                            <li><a href="#" class="hover:text-primary-color transition-all">文章归档</a></li>
+                            <li><a href="#" class="hover:text-primary-color transition-all">关于我们</a></li>
+                        </ul>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold mb-4">联系方式</h3>
+                        <div class="flex space-x-4">
+                            <a href="https://github.com/erberry" class="hover:text-primary-color transition-all">
+                                <i class="fab fa-github text-xl"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 pt-8 border-t text-center text-sm" style="border-color: var(--border-color);">
+                    <p style="color: var(--text-secondary);">© 2023 知识分享平台 | AI技术解析</p>
+                </div>
+            </div>
+        </footer>
+    </div>
+    
+    <!-- JavaScript -->
+    
+    <script>
+        // 初始化Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: document.body.classList.contains('dark-mode') ? 'dark' : 'default',
+            securityLevel: 'loose',
+            logLevel: 'debug',
+            fontFamily: 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif'
+        });
+        
+        // 主题切换
+        const themeToggle = document.getElementById('theme-toggle');
+        const htmlElement = document.documentElement;
+        
+        // 检查本地存储中的主题设置
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme === 'dark') {
+            htmlElement.classList.add('dark');
+            document.querySelector('.toggle-circle i').classList.remove('fa-sun');
+            document.querySelector('.toggle-circle i').classList.add('fa-moon');
+        }
+        
+        themeToggle.addEventListener('click', function() {
+            htmlElement.classList.toggle('dark');
+            
+            const isDark = htmlElement.classList.contains('dark');
+            localStorage.setItem('theme', isDark ? 'dark' : 'light');
+            
+            // 更新图标
+            const icon = document.querySelector('.toggle-circle i');
+            if (isDark) {
+                icon.classList.remove('fa-sun');
+                icon.classList.add('fa-moon');
+            } else {
+                icon.classList.remove('fa-moon');
+                icon.classList.add('fa-sun');
+            }
+            
+            // 重新渲染Mermaid图表
+            mermaid.initialize({
+                startOnLoad: true,
+                theme: isDark ? 'dark' : 'default'
+            });
+            mermaid.init(undefined, document.querySelectorAll('.mermaid'));
+        });
+    </script>
+</body>
+</html>
