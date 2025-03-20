@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="精选文章集锦 - 按时间顺序排列的高质量内容">
+    <meta name="keywords" content="文章,博客,知识分享,时间线">
+    <title>文章时间线 | 知识分享平台</title>
+    <!-- 引入字体 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <!-- 引入 Tailwind CSS -->
+    <link href="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <!-- 引入 Font Awesome -->
+    <link href="https://cdn.staticfile.org/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- 引入 Mermaid -->
+    <script src="https://cdn.bootcdn.net/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        /* 基础样式设置 */
+        :root {
+            --primary-color: #3b82f6;
+            --primary-dark: #2563eb;
+            --secondary-color: #10b981;
+            --accent-color: #8b5cf6;
+            --text-primary-light: #1f2937;
+            --text-secondary-light: #4b5563;
+            --text-muted-light: #9ca3af;
+            --bg-primary-light: #ffffff;
+            --bg-secondary-light: #f3f4f6;
+            --bg-accent-light: #eff6ff;
+            --text-primary-dark: #f9fafb;
+            --text-secondary-dark: #e5e7eb;
+            --text-muted-dark: #9ca3af;
+            --bg-primary-dark: #111827;
+            --bg-secondary-dark: #1f2937;
+            --bg-accent-dark: #374151;
+            --shadow-light: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            --shadow-dark: 0 4px 6px -1px rgba(0, 0, 0, 0.3), 0 2px 4px -1px rgba(0, 0, 0, 0.18);
+            --transition-normal: all 0.3s ease;
+        }
+
+        /* 字体设置 */
+        body {
+            font-family: 'Noto Sans SC', Tahoma, Arial, Roboto, "Droid Sans", "Helvetica Neue", "Droid Sans Fallback", "Heiti SC", "Hiragino Sans GB", Simsun, sans-serif;
+            transition: var(--transition-normal);
+        }
+
+        h1, h2, h3, h4, h5, h6, .serif {
+            font-family: 'Noto Serif SC', serif;
+        }
+
+        /* 明亮模式 */
+        .light-mode {
+            color: var(--text-primary-light);
+            background-color: var(--bg-primary-light);
+        }
+
+        .light-mode .bg-secondary {
+            background-color: var(--bg-secondary-light);
+        }
+
+        .light-mode .bg-accent {
+            background-color: var(--bg-accent-light);
+        }
+
+        .light-mode .text-primary {
+            color: var(--text-primary-light);
+        }
+
+        .light-mode .text-secondary {
+            color: var(--text-secondary-light);
+        }
+
+        .light-mode .text-muted {
+            color: var(--text-muted-light);
+        }
+
+        .light-mode .card {
+            background-color: var(--bg-primary-light);
+            box-shadow: var(--shadow-light);
+        }
+
+        /* 暗黑模式 */
+        .dark-mode {
+            color: var(--text-primary-dark);
+            background-color: var(--bg-primary-dark);
+        }
+
+        .dark-mode .bg-secondary {
+            background-color: var(--bg-secondary-dark);
+        }
+
+        .dark-mode .bg-accent {
+            background-color: var(--bg-accent-dark);
+        }
+
+        .dark-mode .text-primary {
+            color: var(--text-primary-dark);
+        }
+
+        .dark-mode .text-secondary {
+            color: var(--text-secondary-dark);
+        }
+
+        .dark-mode .text-muted {
+            color: var(--text-muted-dark);
+        }
+
+        .dark-mode .card {
+            background-color: var(--bg-secondary-dark);
+            box-shadow: var(--shadow-dark);
+        }
+
+        /* 卡片样式 */
+        .card {
+            border-radius: 0.75rem;
+            transition: var(--transition-normal);
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        /* 时间线样式 */
+        .timeline-container {
+            position: relative;
+        }
+
+        .timeline-container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 24px;
+            height: 100%;
+            width: 2px;
+            background: var(--primary-color);
+            opacity: 0.3;
+        }
+
+        .timeline-dot {
+            position: absolute;
+            left: 20px;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: var(--primary-color);
+            transform: translateY(50%);
+        }
+
+        /* 导航栏样式 */
+        .navbar {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .light-mode .navbar {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .dark-mode .navbar {
+            background-color: rgba(17, 24, 39, 0.8);
+        }
+
+        /* 主题切换按钮 */
+        .theme-toggle {
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(30deg);
+        }
+
+        /* 首字下沉效果 */
+        .first-letter-drop::first-letter {
+            font-size: 3.5rem;
+            font-weight: 700;
+            float: left;
+            line-height: 0.8;
+            margin-right: 0.5rem;
+            color: var(--primary-color);
+        }
+
+        /* 标签样式 */
+        .tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            transition: var(--transition-normal);
+        }
+
+        .light-mode .tag {
+            background-color: var(--bg-accent-light);
+            color: var(--primary-color);
+        }
+
+        .dark-mode .tag {
+            background-color: var(--bg-accent-dark);
+            color: var(--primary-color);
+        }
+
+        .tag:hover {
+            transform: scale(1.05);
+        }
+
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        .light-mode ::-webkit-scrollbar-track {
+            background: var(--bg-secondary-light);
+        }
+
+        .light-mode ::-webkit-scrollbar-thumb {
+            background-color: var(--text-muted-light);
+            border-radius: 20px;
+        }
+
+        .dark-mode ::-webkit-scrollbar-track {
+            background: var(--bg-secondary-dark);
+        }
+
+        .dark-mode ::-webkit-scrollbar-thumb {
+            background-color: var(--text-muted-dark);
+            border-radius: 20px;
+        }
+
+        /* 图表容器 */
+        .mermaid-container {
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            transition: var(--transition-normal);
+        }
+
+        .light-mode .mermaid-container {
+            background-color: var(--bg-secondary-light);
+        }
+
+        .dark-mode .mermaid-container {
+            background-color: var(--bg-secondary-dark);
+        }
+
+        /* 动画效果 */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .animate-fade-in {
+            animation: fadeIn 0.6s ease-out forwards;
+        }
+
+        /* 响应式调整 */
+        @media (max-width: 768px) {
+            .timeline-container::before {
+                left: 18px;
+            }
+            .timeline-dot {
+                left: 14px;
+            }
+        }
+    </style>
+</head>
+<body class="light-mode">
+    <!-- 导航栏 -->
+    <nav class="navbar fixed top-0 left-0 right-0 z-50 py-4 px-6 flex justify-between items-center">
+        <div class="flex items-center space-x-2">
+            <i class="fas fa-book-open text-2xl text-primary-color"></i>
+            <h1 class="text-xl font-bold serif">erberry的个人博客</h1>
+        </div>
+        <div class="flex items-center space-x-6">
+            <a href="#" class="hidden md:block hover:text-primary-color transition-all"><i class="fas fa-home mr-2"></i>首页</a>
+            <div class="theme-toggle" id="themeToggle">
+                <i class="fas fa-sun text-xl" id="lightIcon"></i>
+                <i class="fas fa-moon text-xl hidden" id="darkIcon"></i>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero 区域 -->
+    <header class="pt-32 pb-20 px-6 md:px-12 lg:px-24 bg-accent text-center">
+        <div class="max-w-4xl mx-auto animate-fade-in">
+            <h1 class="text-4xl md:text-5xl lg:text-6xl font-bold mb-6 serif"><span class="text-primary-color"></span></h1>
+            <p class="text-lg md:text-xl text-secondary mb-8 max-w-2xl mx-auto">The great end of life is not knowledge, but action.</p>
+            <div class="flex flex-wrap justify-center gap-4">
+                <a href="#articles" class="px-6 py-3 text-secondary bg-primary-color hover:bg-primary-dark text-white rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary-color focus:ring-opacity-50">
+                    <i class="fas fa-arrow-down mr-2"></i>浏览文章
+                </a>
+                <a href="#knowledge-map" class="px-6 py-3 text-secondary bg-secondary-color hover:bg-opacity-90 text-white rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-secondary-color focus:ring-opacity-50">
+                    <i class="fas fa-project-diagram mr-2"></i>知识图谱
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- 主要内容区 -->
+    <main class="py-16 px-6 md:px-12 lg:px-24">
+        <!-- 文章时间线 -->
+        <section id="articles" class="max-w-4xl mx-auto mb-24">
+            <div class="flex items-center mb-12">
+                <div class="w-10 h-10 rounded-full bg-primary-color flex items-center justify-center mr-4">
+                    <i class="fas fa-clock text-white"></i>
+                </div>
+                <h2 class="text-3xl font-bold serif">文章时间线</h2>
+            </div>
+
+            <div class="timeline-container pl-12 md:pl-16">
+                <!-- 2023年12月 -->
+                <article class="relative mb-16 animate-fade-in" style="animation-delay: 0.1s;">
+                    <div class="timeline-dot"></div>
+                    <div class="card p-6 md:p-8">
+                        <div class="flex flex-wrap justify-between items-start mb-4">
+                            <div>
+                                <span class="tag mb-3"><i class="fas fa-calendar-alt mr-1"></i>2025-03-19</span>
+                                <span class="tag ml-2"><i class="fas fa-bookmark mr-1"></i>技术</span>
+                            </div>
+                            <span class="text-muted text-sm mt-2 md:mt-0">阅读时间：8 分钟</span>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-3 serif"><a href="large-model-gpu-requirements.html" class="hover:text-primary-color transition-all">深入解析transformer并行运算</a></h3>
+                        <p class="text-secondary mb-4 first-letter-drop">深入解析大模型的显卡需求 - 为什么需要多张显卡？探索大模型背并行运算技术</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="tag"><i class="fas fa-brain mr-1"></i>技术</span>
+                            <span class="tag"><i class="fas fa-bolt mr-1"></i>transformer</span>
+                            <span class="tag"><i class="fas fa-lightbulb mr-1"></i>并行计算</span>
+                        </div>
+                        <a href="large-model-gpu-requirements.html" class="inline-flex items-center text-primary-color hover:underline">
+                            阅读全文 <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </article>
+
+                <!-- 2023年11月 -->
+                <article class="relative mb-16 animate-fade-in" style="animation-delay: 0.2s;">
+                    <div class="timeline-dot"></div>
+                    <div class="card p-6 md:p-8">
+                        <div class="flex flex-wrap justify-between items-start mb-4">
+                            <div>
+                                <span class="tag mb-3"><i class="fas fa-calendar-alt mr-1"></i>2025-03-17</span>
+                                <span class="tag ml-2"><i class="fas fa-bookmark mr-1"></i>技术</span>
+                            </div>
+                            <span class="text-muted text-sm mt-2 md:mt-0">阅读时间：12 分钟</span>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-3 serif"><a href="gpu-calcu.html" class="hover:text-primary-color transition-all">深入解析DeepSeek-V3 模型显存占用计算</a></h3>
+                        <p class="text-secondary mb-4 first-letter-drop">DeepSeek-V3是一个拥有6710亿参数的大型语言模型，采用混合专家系统(MoE)架构设计。本文将分析该模型在推理过程中的显存需求，基于官方推理代码和配置文件进行计算。模型使用fp8数据类型，每个参数占1字节。</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="tag"><i class="fas fa-code mr-1"></i>技术</span>
+                            <span class="tag"><i class="fas fa-sitemap mr-1"></i>DeepSeek</span>
+                            <span class="tag"><i class="fas fa-tools mr-1"></i>transformer</span>
+                        </div>
+                        <a href="gpu-calcu.html" class="inline-flex items-center text-primary-color hover:underline">
+                            阅读全文 <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </article>
+
+                <!-- 2023年10月 -->
+                <article class="relative mb-16 animate-fade-in" style="animation-delay: 0.3s;">
+                    <div class="timeline-dot"></div>
+                    <div class="card p-6 md:p-8">
+                        <div class="flex flex-wrap justify-between items-start mb-4">
+                            <div>
+                                <span class="tag mb-3"><i class="fas fa-calendar-alt mr-1"></i>2025-03-15</span>
+                                <span class="tag ml-2"><i class="fas fa-bookmark mr-1"></i>技术</span>
+                            </div>
+                            <span class="text-muted text-sm mt-2 md:mt-0">阅读时间：5 分钟</span>
+                        </div>
+                        <h3 class="text-2xl font-bold mb-3 serif"><a href="deepseek.html" class="hover:text-primary-color transition-all">DeepSeek-R1: 推理能力的新突破</a></h3>
+                        <p class="text-secondary mb-4 first-letter-drop">随着大语言模型（LLM）的飞速发展，越来越多的研究者开始探索如何提升模型的推理能力、响应一致性和可读性。最近，DeepSeek-R1作为一种全新的AI模型在这一领域引起了广泛关注。今天，我们就来深入了解DeepSeek-R1及其创新的训练方法。</p>
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            <span class="tag"><i class="fas fa-atom mr-1"></i>技术</span>
+                            <span class="tag"><i class="fas fa-microchip mr-1"></i>DeepSeek-R1</span>
+                        </div>
+                        <a href="deepseek.html" class="inline-flex items-center text-primary-color hover:underline">
+                            阅读全文 <i class="fas fa-arrow-right ml-1"></i>
+                        </a>
+                    </div>
+                </article>
+
+            </div>
+
+            <!-- 加载更多按钮 -->
+            <div class="text-center mt-12">
+                <button id="loadMoreBtn" class="px-6 py-3 bg-secondary bg-opacity-10 hover:bg-opacity-20 text-primary-color rounded-full transition-all transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-primary-color focus:ring-opacity-50">
+                    <i class="fas fa-spinner mr-2"></i>加载更多文章
+                </button>
+            </div>
+
+            <!-- 更多文章列表（默认隐藏） -->
+            <!--  
+            <div id="moreArticles" class="hidden mt-8">
+                <div class="card p-6">
+                    <ul class="space-y-4">
+                        <li class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                            <a href="article5.html" class="hover:text-primary-color">
+                                <span class="text-sm text-muted">2023-08-15</span>
+                                <span class="ml-4">深度学习在自然语言处理中的应用</span>
+                            </a>
+                            <span class="tag text-xs">技术</span>
+                        </li>
+                        <li class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                            <a href="article6.html" class="hover:text-primary-color">
+                                <span class="text-sm text-muted">2023-07-28</span>
+                                <span class="ml-4">可持续发展与环境保护</span>
+                            </a>
+                            <span class="tag text-xs">科学</span>
+                        </li>
+                        <li class="flex justify-between items-center py-2 border-b border-gray-200 dark:border-gray-700">
+                            <a href="article7.html" class="hover:text-primary-color">
+                                <span class="text-sm text-muted">2023-07-10</span>
+                                <span class="ml-4">现代艺术的演变与发展</span>
+                            </a>
+                            <span class="tag text-xs">艺术</span>
+                        </li>
+                        
+                    </ul>
+                </div>
+            </div>-->
+            
+        </section>
+
+        <!-- 知识图谱 -->
+        
+    </main>
+
+    <!-- 页脚 -->
+    <footer class="py-12 px-6 md:px-12 lg:px-24 bg-secondary text-center">
+        <div class="max-w-4xl mx-auto">
+            <div class="flex justify-center space-x-6 mb-6">
+                <a href="https://github.com/erberry" class="text-2xl hover:text-primary-color transition-all"><i class="fab fa-github"></i></a>
+            </div>
+            <p class="text-muted mb-2">© 2025 erberry的个人博客. 保留所有权利.</p>
+            <p class="text-muted text-sm">使用 <i class="fas fa-heart text-red-500 mx-1"></i> 和现代Web技术精心打造</p>
+        </div>
+    </footer>
+
+    <!-- JavaScript -->
+    <script>
+        // 初始化 Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: document.body.classList.contains('dark-mode') ? 'dark' : 'default',
+            securityLevel: 'loose',
+            fontFamily: '"Noto Sans SC", sans-serif'
+        });
+
+        // 主题切换功能
+        document.addEventListener('DOMContentLoaded', function() {
+            const themeToggle = document.getElementById('themeToggle');
+            const lightIcon = document.getElementById('lightIcon');
+            const darkIcon = document.getElementById('darkIcon');
+            const body = document.body;
+            
+            // 检查系统偏好
+            const prefersDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+            
+            // 检查本地存储的主题设置
+            const savedTheme = localStorage.getItem('theme');
+            
+            // 根据本地存储或系统偏好设置初始主题
+            if (savedTheme === 'dark' || (!savedTheme && prefersDarkMode)) {
+                body.classList.remove('light-mode');
+                body.classList.add('dark-mode');
+                lightIcon.classList.add('hidden');
+                darkIcon.classList.remove('hidden');
+                updateMermaidTheme('dark');
+            }
+            
+            // 主题切换事件
+            themeToggle.addEventListener('click', function() {
+                if (body.classList.contains('light-mode')) {
+                    body.classList.remove('light-mode');
+                    body.classList.add('dark-mode');
+                    lightIcon.classList.add('hidden');
+                    darkIcon.classList.remove('hidden');
+                    localStorage.setItem('theme', 'dark');
+                    updateMermaidTheme('dark');
+                } else {
+                    body.classList.remove('dark-mode');
+                    body.classList.add('light-mode');
+                    darkIcon.classList.add('hidden');
+                    lightIcon.classList.remove('hidden');
+                    localStorage.setItem('theme', 'light');
+                    updateMermaidTheme('default');
+                }
+            });
+            
+            // 更新 Mermaid 图表主题
+            function updateMermaidTheme(theme) {
+                mermaid.initialize({
+                    startOnLoad: false,
+                    theme: theme,
+                    securityLevel: 'loose',
+                    fontFamily: '"Noto Sans SC", sans-serif'
+                });
+                
+                // 重新渲染所有图表
+                document.querySelectorAll('.mermaid').forEach(function(element) {
+                    const content = element.textContent;
+                    element.removeAttribute('data-processed');
+                    element.textContent = content;
+                });
+                mermaid.init(undefined, '.mermaid');
+            }
+            
+            // 添加滚动动画
+            const animateElements = document.querySelectorAll('.animate-fade-in');
+            const observer = new IntersectionObserver((entries) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+            
+            animateElements.forEach(element => {
+                element.style.opacity = '0';
+                element.style.transform = 'translateY(20px)';
+                element.style.transition = 'opacity 0.6s ease-out, transform 0.6s ease-out';
+                observer.observe(element);
+            });
+        });
+    </script>
+</body>
+</html>
+
+<script>
+    // 加载更多功能
+    document.addEventListener('DOMContentLoaded', function() {
+        const loadMoreBtn = document.getElementById('loadMoreBtn');
+        const moreArticles = document.getElementById('moreArticles');
+        let isMoreVisible = false;
+
+        loadMoreBtn.addEventListener('click', function() {
+            if (!isMoreVisible) {
+                // 显示更多文章
+                moreArticles.classList.remove('hidden');
+                moreArticles.classList.add('animate-fade-in');
+                loadMoreBtn.innerHTML = '<i class="fas fa-chevron-up mr-2"></i>收起文章';
+                isMoreVisible = true;
+            } else {
+                // 隐藏更多文章
+                moreArticles.classList.add('hidden');
+                loadMoreBtn.innerHTML = '<i class="fas fa-spinner mr-2"></i>加载更多文章';
+                isMoreVisible = false;
+            }
+        });
+    });
+</script>

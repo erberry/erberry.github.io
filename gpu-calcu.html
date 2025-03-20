@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <!-- 添加 SEO 信息 -->
+     <meta name="description" content="">
+     <meta name="keywords" content="">
+     <title></title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+    <script src="https://cdn.bootcdn.net/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --accent-color: #8b5cf6;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-card: #ffffff;
+            --border-color: #e5e7eb;
+            --highlight-bg: #f3f4f6;
+        }
+
+        .dark {
+            --primary-color: #60a5fa;
+            --secondary-color: #34d399;
+            --accent-color: #a78bfa;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --bg-card: #1f2937;
+            --border-color: #374151;
+            --highlight-bg: #374151;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', Tahoma, Arial, Roboto, "Droid Sans", "Helvetica Neue", "Droid Sans Fallback", "Heiti SC", "Hiragino Sans GB", Simsun, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Noto Serif SC', serif;
+            font-weight: 700;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            line-height: 1.4;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .highlight {
+            background-color: var(--highlight-bg);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .first-letter::first-letter {
+            font-size: 3.5em;
+            float: left;
+            line-height: 0.8;
+            margin-right: 0.1em;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .section-divider {
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 2px;
+            margin: 2rem 0;
+        }
+
+        .memory-bar {
+            height: 2rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            background-color: var(--highlight-bg);
+        }
+
+        .memory-segment {
+            height: 100%;
+            display: inline-block;
+            transition: width 1s ease-in-out;
+        }
+
+        .toggle-container {
+            width: 60px;
+            height: 30px;
+            border-radius: 15px;
+            background-color: var(--bg-secondary);
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-circle {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: var(--bg-primary);
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+        }
+
+        .dark .toggle-circle {
+            transform: translateX(30px);
+        }
+
+        .mermaid {
+            background-color: var(--bg-card);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        @media (max-width: 640px) {
+            .memory-bar {
+                height: 1.5rem;
+            }
+        }
+        /* 导航栏样式 */
+        .navbar {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .light-mode .navbar {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .dark-mode .navbar {
+            background-color: rgba(17, 24, 39, 0.8);
+        }
+
+        /* 主题切换按钮 */
+        .theme-toggle {
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(30deg);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col">
+        <!-- 导航栏 -->
+        <nav class="navbar fixed top-0 left-0 right-0 z-50 py-4 px-6 flex justify-between items-center" style="background-color: var(--bg-primary);">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-book-open text-2xl" style="color: var(--primary-color);"></i>
+                <h1 class="text-xl font-bold serif">erberry的个人博客</h1>
+            </div>
+            <div class="flex items-center space-x-6">
+                <a href="index.html" class="hidden md:block hover:text-primary-color transition-all"><i class="fas fa-home mr-2"></i>首页</a>
+                <div class="toggle-container" id="theme-toggle">
+                    <div class="toggle-circle">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero 区域 -->
+        <header class="pt-24 pb-16 px-4 sm:px-6 lg:px-8 text-center" style="background-color: var(--bg-secondary);">
+            <div class="max-w-5xl mx-auto">
+                <h1 class="hero-title gradient-text mb-6">DeepSeek-V3 模型显存分析</h1>
+                <p class="hero-subtitle mb-8" style="color: var(--text-secondary);">深入解析671B参数模型的内存需求与架构设计</p>
+                <div class="flex justify-center space-x-4">
+                    <a href="https://github.com/deepseek-ai/DeepSeek-V3" target="_blank" class="inline-flex items-center px-6 py-3 rounded-lg font-medium transition-all" style="background-color: var(--primary-color); color: white;">
+                        <i class="fab fa-github mr-2"></i>官方代码库
+                    </a>
+                    <a href="https://github.com/erberry/DeepSeek-V3/blob/main/inference/model.py" target="_blank" class="inline-flex items-center px-6 py-3 rounded-lg font-medium transition-all" style="border: 2px solid var(--primary-color); color: var(--primary-color);">
+                        <i class="fas fa-code mr-2"></i>注释版代码
+                    </a>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+            <!-- 模型概述 -->
+            <section class="mb-16">
+                <h2 class="text-3xl font-bold mb-6">模型架构概览</h2>
+                <div class="card p-6 mb-8">
+                    <p class="first-letter mb-4">DeepSeek-V3是一个拥有6710亿参数的大型语言模型，采用混合专家系统(MoE)架构设计。本文将分析该模型在推理过程中的显存需求，基于官方推理代码和配置文件进行计算。模型使用fp8数据类型，每个参数占1字节。</p>
+                    
+                    <div class="highlight mt-6">
+                        <div class="flex flex-col md:flex-row justify-between items-center mb-4">
+                            <div>
+                                <h3 class="text-xl font-bold">模型基本参数</h3>
+                                <p class="text-sm" style="color: var(--text-secondary);">DeepSeek-V3的核心配置</p>
+                            </div>
+                            <div class="mt-4 md:mt-0">
+                                <span class="px-3 py-1 rounded-full text-sm font-medium" style="background-color: var(--accent-color); color: white;">
+                                    671B 参数
+                                </span>
+                            </div>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-layer-group mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">层数</h4>
+                                </div>
+                                <p class="text-2xl font-bold">61层</p>
+                                <p class="text-sm" style="color: var(--text-secondary);">3层标准MLP + 58层MoE</p>
+                            </div>
+                            <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-vector-square mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">隐藏维度</h4>
+                                </div>
+                                <p class="text-2xl font-bold">7,168</p>
+                                <p class="text-sm" style="color: var(--text-secondary);">模型的基础维度大小</p>
+                            </div>
+                            <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                                <div class="flex items-center mb-2">
+                                    <i class="fas fa-brain mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">注意力头数</h4>
+                                </div>
+                                <p class="text-2xl font-bold">128个</p>
+                                <p class="text-sm" style="color: var(--text-secondary);">多头注意力机制</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 模型架构图 -->
+                <div class="card p-6">
+                    <h3 class="text-xl font-bold mb-4">模型架构图</h3>
+                    <div class="mermaid">
+                        graph TD
+                            A[输入嵌入层] --> B[前3层: 标准Transformer]
+                            B --> C[后58层: MoE Transformer]
+                            C --> D[输出层]
+                            
+                            subgraph "标准Transformer层"
+                                B1[注意力机制] --> B2[MLP]
+                            end
+                            
+                            subgraph "MoE Transformer层"
+                                C1[注意力机制] --> C2[混合专家系统]
+                                C2 --> |路由| C3[256个路由专家]
+                                C2 --> |共享| C4[2个共享专家]
+                            end
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 显存分析 -->
+            <section class="mb-16">
+                <h2 class="text-3xl font-bold mb-6">显存需求分析</h2>
+                
+                <!-- 嵌入层 -->
+                <div class="card p-6 mb-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" style="background-color: var(--primary-color);">
+                            <i class="fas fa-table text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold">1. 嵌入层 (Embedding)</h3>
+                    </div>
+                    <div class="pl-4 border-l-4" style="border-color: var(--primary-color);">
+                        <p class="mb-2">词表大小 × 隐藏维度 × 字节数</p>
+                        <p class="mb-2">129,280 × 7,168 × 1 = <span class="font-bold">883.75 MB</span></p>
+                    </div>
+                </div>
+                
+                <!-- Transformer块 -->
+                <div class="card p-6 mb-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" style="background-color: var(--secondary-color);">
+                            <i class="fas fa-cubes text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold">2. Transformer块 (61层)</h3>
+                    </div>
+                    
+                    <!-- 注意力层 -->
+                    <div class="pl-4 border-l-4 mb-6" style="border-color: var(--secondary-color);">
+                        <h4 class="text-lg font-bold mb-2">2.1 注意力层 (所有层都有)</h4>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                                <p class="mb-1">wq_a: 7,168 × 1,536 = 10.5 MB</p>
+                                <p class="mb-1">wq_b: 1,536 × 128 × 192 = 36 MB</p>
+                                <p class="mb-1">wkv_a: 7,168 × 576 = 3.93 MB</p>
+                                <p class="mb-1">wkv_b: 512 × 128 × 256 = 16 MB</p>
+                            </div>
+                            <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                                <p class="mb-1">wo: 128 × 128 × 7,168 = 112 MB</p>
+                                <p class="mb-1">kv_cache: 8 × 16,384 × 512 = 64 MB</p>
+                                <p class="mb-1">pe_cache: 8 × 16,384 × 64 = 8 MB</p>
+                                <p class="mb-1">总计: <span class="font-bold">约250.46 MB</span></p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 标准MLP层 -->
+                    <div class="pl-4 border-l-4 mb-6" style="border-color: var(--secondary-color);">
+                        <h4 class="text-lg font-bold mb-2">2.2 标准MLP层 (仅前3层使用)</h4>
+                        <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                            <p class="mb-1">w1: 7,168 × 18,432 = 126 MB</p>
+                            <p class="mb-1">w2: 18,432 × 7,168 = 126 MB</p>
+                            <p class="mb-1">w3: 7,168 × 18,432 = 126 MB</p>
+                            <p class="mb-1">总计: <span class="font-bold">约378 MB</span></p>
+                        </div>
+                    </div>
+                    
+                    <!-- MoE层 -->
+                    <div class="pl-4 border-l-4 mb-6" style="border-color: var(--secondary-color);">
+                        <h4 class="text-lg font-bold mb-2">2.3 MoE层 (后58层使用)</h4>
+                        <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                            <p class="mb-1">门控权重: 256 × 7,168 = 1.75 MB</p>
+                            <p class="mb-1">共享专家: 7,168 × 2,048 × 3 = 42 MB</p>
+                            <p class="mb-1">每个路由专家: 7,168 × 2,048 × 3 = 42 MB</p>
+                            <p class="mb-1">256个路由专家: 256 × 42 MB = 10,752 MB</p>
+                            <p class="mb-1">总计: <span class="font-bold">约10.54 GB</span></p>
+                        </div>
+                    </div>
+                    
+                    <!-- 层归一化 -->
+                    <div class="pl-4 border-l-4" style="border-color: var(--secondary-color);">
+                        <h4 class="text-lg font-bold mb-2">2.4 层归一化 (所有层都有)</h4>
+                        <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                            <p class="mb-1">每个归一化层: 7,168 = 7 KB</p>
+                            <p class="mb-1">每层两个归一化: 2 × 7 KB = <span class="font-bold">14 KB</span></p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 输出层 -->
+                <div class="card p-6 mb-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" style="background-color: var(--accent-color);">
+                            <i class="fas fa-sign-out-alt text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold">3. 输出层</h3>
+                    </div>
+                    <div class="pl-4 border-l-4" style="border-color: var(--accent-color);">
+                        <p class="mb-2">隐藏维度 × 词表大小</p>
+                        <p class="mb-2">7,168 × 129,280 = <span class="font-bold">883.75 MB</span></p>
+                    </div>
+                </div>
+                
+                <!-- 掩码 -->
+                <div class="card p-6 mb-8">
+                    <div class="flex items-center mb-4">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center mr-3" style="background-color: var(--primary-color);">
+                            <i class="fas fa-mask text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold">4. 注意力掩码</h3>
+                    </div>
+                    <div class="pl-4 border-l-4" style="border-color: var(--primary-color);">
+                        <p class="mb-2">序列长度 × 序列长度 × 4字节(float32)</p>
+                        <p class="mb-2">16,384 × 16,384 × 4 = <span class="font-bold">1 GB</span></p>
+                    </div>
+                </div>
+                
+                <!-- 总显存需求 -->
+                <!-- 总显存需求 -->
+                <div class="card p-6">
+                    <div class="flex items-center mb-6">
+                        <div class="w-12 h-12 rounded-full flex items-center justify-center mr-3" style="background-color: var(--accent-color);">
+                            <i class="fas fa-memory text-white"></i>
+                        </div>
+                        <h3 class="text-xl font-bold">5. 总显存需求</h3>
+                    </div>
+                    
+                    <div class="pl-4 border-l-4 mb-6" style="border-color: var(--accent-color);">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                            <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                                <p class="mb-1">前3层(带MLP的块): 3 × 628.47 MB = 1,885.41 MB</p>
+                                <p class="mb-1">后58层(带MoE的块): 58 × 11,046.22 MB = 640,680.76 MB</p>
+                                <p class="mb-1">嵌入层: 883.75 MB</p>
+                            </div>
+                            <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                                <p class="mb-1">输出层: 883.75 MB</p>
+                                <p class="mb-1">注意力掩码: 1,024 MB</p>
+                                <p class="font-bold">总计: 约 630 GB</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- 显存分布可视化 -->
+                    <h4 class="text-lg font-bold mb-4">显存分布</h4>
+                    <div class="memory-bar mb-2">
+                        <div class="memory-segment" style="width: 0.3%; background-color: var(--primary-color);" title="嵌入层: 883.75 MB (0.14%)"></div>
+                        <div class="memory-segment" style="width: 0.3%; background-color: var(--secondary-color);" title="前3层MLP块: 1,885.41 MB (0.3%)"></div>
+                        <div class="memory-segment" style="width: 98%; background-color: var(--accent-color);" title="后58层MoE块: 640,680.76 MB (98.5%)"></div>
+                        <div class="memory-segment" style="width: 0.3%; background-color: #10b981;" title="输出层: 883.75 MB (0.14%)"></div>
+                        <div class="memory-segment" style="width: 1.1%; background-color: #f59e0b;" title="注意力掩码: 1,024 MB (0.92%)"></div>
+                    </div>
+                    <div class="grid grid-cols-5 gap-2 text-xs text-center">
+                        <div><span class="inline-block w-3 h-3 mr-1" style="background-color: var(--primary-color);"></span>嵌入层</div>
+                        <div><span class="inline-block w-3 h-3 mr-1" style="background-color: var(--secondary-color);"></span>MLP块</div>
+                        <div><span class="inline-block w-3 h-3 mr-1" style="background-color: var(--accent-color);"></span>MoE块</div>
+                        <div><span class="inline-block w-3 h-3 mr-1" style="background-color: #10b981;"></span>输出层</div>
+                        <div><span class="inline-block w-3 h-3 mr-1" style="background-color: #f59e0b;"></span>掩码</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- 模型特点分析 -->
+            <section class="mb-16">
+                <h2 class="text-3xl font-bold mb-6">模型架构特点分析</h2>
+                
+                <div class="card p-6 mb-8">
+                    <h3 class="text-xl font-bold mb-4">MoE架构的优势</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-tachometer-alt mr-2" style="color: var(--primary-color);"></i>
+                                <h4 class="font-bold">计算效率提升</h4>
+                            </div>
+                            <p class="mb-4">MoE架构在推理时只激活部分参数，大幅降低计算量，使得模型能够在有限计算资源下处理更复杂的任务。</p>
+                            
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-expand-arrows-alt mr-2" style="color: var(--primary-color);"></i>
+                                <h4 class="font-bold">可扩展性</h4>
+                            </div>
+                            <p>通过增加专家数量，可以轻松扩展模型容量，而不会导致推理计算量的线性增长。</p>
+                        </div>
+                        <div>
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-brain mr-2" style="color: var(--primary-color);"></i>
+                                <h4 class="font-bold">专业化能力</h4>
+                            </div>
+                            <p class="mb-4">不同专家可以专注于不同类型的知识或任务，提高模型在特定领域的表现。</p>
+                            
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-balance-scale mr-2" style="color: var(--primary-color);"></i>
+                                <h4 class="font-bold">参数效率</h4>
+                            </div>
+                            <p>相比密集模型，MoE可以在相同计算预算下拥有更多参数，提高模型的知识容量。</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="card p-6">
+                    <h3 class="text-xl font-bold mb-4">显存优化策略</h3>
+                    <div class="mermaid">
+                        graph TD
+                            A[显存优化策略] --> B[量化技术]
+                            A --> C[激活值重计算]
+                            A --> D[分布式推理]
+                            A --> E[专家并行]
+                            
+                            B --> B1[FP8量化]
+                            B --> B2[KV缓存量化]
+                            
+                            C --> C1[选择性检查点]
+                            
+                            D --> D1[张量并行]
+                            D --> D2[流水线并行]
+                            
+                            E --> E1[专家分片]
+                            E --> E2[动态加载]
+                    </div>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                        <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-compress-arrows-alt mr-2" style="color: var(--secondary-color);"></i>
+                                <h4 class="font-bold">量化技术</h4>
+                            </div>
+                            <p>DeepSeek-V3采用FP8量化，将参数精度从FP16/FP32降低到FP8，显著减少显存占用，同时保持模型性能。</p>
+                        </div>
+                        <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-server mr-2" style="color: var(--secondary-color);"></i>
+                                <h4 class="font-bold">分布式推理</h4>
+                            </div>
+                            <p>通过张量并行和流水线并行技术，将模型分布在多个GPU上，每个GPU只需加载部分模型参数。</p>
+                        </div>
+                        <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-recycle mr-2" style="color: var(--secondary-color);"></i>
+                                <h4 class="font-bold">激活值重计算</h4>
+                            </div>
+                            <p>在前向传播时丢弃中间激活值，需要时重新计算，以空间换时间的方式减少显存占用。</p>
+                        </div>
+                        <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                            <div class="flex items-center mb-2">
+                                <i class="fas fa-network-wired mr-2" style="color: var(--secondary-color);"></i>
+                                <h4 class="font-bold">专家并行</h4>
+                            </div>
+                            <p>将不同专家分配到不同设备上，只加载当前推理需要的专家，大幅降低单设备显存需求。</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+
+       <!-- 在文件末尾添加新的页脚 -->
+       <footer class="py-12" style="background-color: var(--bg-secondary);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold mb-4">关于我们</h3>
+                    <p class="text-sm" style="color: var(--text-secondary);">
+                        致力于分享AI与技术领域的前沿知识，让复杂的技术变得简单易懂。
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="index.html" class="hover:text-primary-color transition-all">首页</a></li>
+                        <li><a href="#" class="hover:text-primary-color transition-all">文章归档</a></li>
+                        <li><a href="#" class="hover:text-primary-color transition-all">关于我们</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">联系方式</h3>
+                    <div class="flex space-x-4">
+                        <a href="https://github.com/erberry" class="hover:text-primary-color transition-all">
+                            <i class="fab fa-github text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t text-center text-sm" style="border-color: var(--border-color);">
+                <p style="color: var(--text-secondary);">© 2023 知识分享平台 | AI技术解析</p>
+            </div>
+        </div>
+    </footer>
+    </div>
+
+    <script>
+        // 初始化Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+
+        // 深色/浅色模式切换
+        const toggleTheme = () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+
+            // 更新Mermaid图表主题
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: isDark ? 'dark' : 'default'
+            });
+
+            // 重新渲染所有图表
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const content = el.textContent;
+                el.textContent = '';
+                mermaid.render(`mermaid-${Math.random().toString(36).substr(2, 9)}`, content, (svg) => {
+                    el.innerHTML = svg;
+                });
+            });
+        };
+
+        // 检测系统主题
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // 监听系统主题变化
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (e.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            // 更新Mermaid图表主题
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: e.matches ? 'dark' : 'default'
+            });
+
+            // 重新渲染所有图表
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const content = el.textContent;
+                el.textContent = '';
+                mermaid.render(`mermaid-${Math.random().toString(36).substr(2, 9)}`, content, (svg) => {
+                    el.innerHTML = svg;
+                });
+            });
+        });
+
+        // 绑定主题切换按钮
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+        // 添加滚动动画
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.card');
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            cards.forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                observer.observe(card);
+            });
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // 内存条动画
+        setTimeout(() => {
+            document.querySelectorAll('.memory-segment').forEach(segment => {
+                const width = segment.style.width;
+                segment.style.width = '0';
+                setTimeout(() => {
+                    segment.style.width = width;
+                }, 100);
+            });
+        }, 500);
+    </script>
+</body>
+
+</html>

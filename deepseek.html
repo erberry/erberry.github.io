@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <!-- 添加 SEO 信息 -->
+     <meta name="description" content="">
+     <meta name="keywords" content="">
+     <title></title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+    <script src="https://cdn.bootcdn.net/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --accent-color: #8b5cf6;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-card: #ffffff;
+            --border-color: #e5e7eb;
+            --highlight-bg: #f3f4f6;
+            --hero-bg: linear-gradient(to right, #f0f7ff, #f5f3ff);
+        }
+
+        .dark {
+            --primary-color: #60a5fa;
+            --secondary-color: #34d399;
+            --accent-color: #a78bfa;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --bg-card: #1f2937;
+            --border-color: #374151;
+            --highlight-bg: #374151;
+            --hero-bg: linear-gradient(to right, #1e293b, #111827);
+        }
+
+        body {
+            font-family: 'Noto Sans SC', Tahoma, Arial, Roboto, "Droid Sans", "Helvetica Neue", "Droid Sans Fallback", "Heiti SC", "Hiragino Sans GB", Simsun, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Noto Serif SC', serif;
+            font-weight: 700;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            line-height: 1.4;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .highlight {
+            background-color: var(--highlight-bg);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .first-letter::first-letter {
+            font-size: 3.5em;
+            float: left;
+            line-height: 0.8;
+            margin-right: 0.1em;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .section-divider {
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 2px;
+            margin: 2rem 0;
+        }
+
+        .memory-bar {
+            height: 2rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            background-color: var(--highlight-bg);
+        }
+
+        .memory-segment {
+            height: 100%;
+            display: inline-block;
+            transition: width 1s ease-in-out;
+        }
+
+        .toggle-container {
+            width: 60px;
+            height: 30px;
+            border-radius: 15px;
+            background-color: var(--bg-secondary);
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-circle {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: var(--bg-primary);
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+        }
+
+        .dark .toggle-circle {
+            transform: translateX(30px);
+        }
+
+        .mermaid {
+            background-color: var(--bg-card);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        @media (max-width: 640px) {
+            .memory-bar {
+                height: 1.5rem;
+            }
+        }
+        /* 导航栏样式 */
+        .navbar {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .light-mode .navbar {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .dark-mode .navbar {
+            background-color: rgba(17, 24, 39, 0.8);
+        }
+
+        /* 主题切换按钮 */
+        .theme-toggle {
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(30deg);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col">
+        <!-- 导航栏 -->
+        <nav class="navbar fixed top-0 left-0 right-0 z-50 py-4 px-6 flex justify-between items-center" style="background-color: var(--bg-primary);">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-book-open text-2xl" style="color: var(--primary-color);"></i>
+                <h1 class="text-xl font-bold serif">erberry的个人博客</h1>
+            </div>
+            <div class="flex items-center space-x-6">
+                <a href="index.html" class="hidden md:block hover:text-primary-color transition-all"><i class="fas fa-home mr-2"></i>首页</a>
+                <div class="toggle-container" id="theme-toggle">
+                    <div class="toggle-circle">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero 区域 -->
+        <header class="pt-24 pb-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-50 to-purple-50" style="background: var(--hero-bg);">
+            <div class="max-w-5xl mx-auto">
+                <div class="mb-6 inline-block">
+                    <span class="px-3 py-1 text-sm font-medium rounded-full" style="background-color: var(--highlight-bg); color: var(--primary-color);">
+                        <i class="fas fa-robot mr-1"></i> AI 模型研究
+                    </span>
+                </div>
+                <h1 class="hero-title mb-6 gradient-text">DeepSeek-R1: 推理能力的新突破</h1>
+                <p class="hero-subtitle mb-8" style="color: var(--text-secondary);">探索无需 SFT 的强化学习与群体相对策略优化的创新</p>
+                <div class="flex items-center space-x-4 text-sm" style="color: var(--text-secondary);">
+                    <div class="flex items-center">
+                        <i class="far fa-calendar-alt mr-2"></i>
+                        <span>2023年12月15日</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="far fa-clock mr-2"></i>
+                        <span>阅读时间: 8 分钟</span>
+                    </div>
+                    <div class="flex items-center">
+                        <i class="fas fa-tag mr-2"></i>
+                        <span>大语言模型, 强化学习</span>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="py-12 px-4 sm:px-6 lg:px-8">
+            <div class="max-w-4xl mx-auto">
+                <!-- 导言部分 -->
+                <div class="mb-12">
+                    <p class="text-lg first-letter mb-6">
+                        随着大语言模型（LLM）的飞速发展，越来越多的研究者开始探索如何提升模型的推理能力、响应一致性和可读性。最近，DeepSeek-R1作为一种全新的AI模型在这一领域引起了广泛关注。今天，我们就来深入了解DeepSeek-R1及其创新的训练方法。
+                    </p>
+                    
+                    <!-- 目录卡片 -->
+                    <div class="card p-6 mb-10">
+                        <h3 class="text-lg font-bold mb-4"><i class="fas fa-list-ul mr-2" style="color: var(--primary-color);"></i>本文概览</h3>
+                        <ul class="space-y-2">
+                            <li class="flex items-start">
+                                <span class="inline-block w-6 h-6 rounded-full mr-3 flex items-center justify-center text-sm" style="background-color: var(--primary-color); color: white;">1</span>
+                                <span>DeepSeek-R1-Zero 的无 SFT 训练策略</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="inline-block w-6 h-6 rounded-full mr-3 flex items-center justify-center text-sm" style="background-color: var(--primary-color); color: white;">2</span>
+                                <span>群体相对策略优化 (GRPO) 算法解析</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="inline-block w-6 h-6 rounded-full mr-3 flex items-center justify-center text-sm" style="background-color: var(--primary-color); color: white;">3</span>
+                                <span>强化学习奖励规则设计</span>
+                            </li>
+                            <li class="flex items-start">
+                                <span class="inline-block w-6 h-6 rounded-full mr-3 flex items-center justify-center text-sm" style="background-color: var(--primary-color); color: white;">4</span>
+                                <span>性能对比与未来展望</span>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- 第一部分：训练策略 -->
+                <section class="mb-16">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <i class="fas fa-graduation-cap mr-3" style="color: var(--primary-color);"></i>
+                        DeepSeek-R1-Zero 的训练策略：无 SFT，直接强化学习
+                    </h2>
+                    
+                    <div class="card p-6 mb-8">
+                        <div class="flex items-start">
+                            <div class="mr-4 text-4xl" style="color: var(--primary-color);">
+                                <i class="fas fa-lightbulb"></i>
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold mb-2">创新训练流程</h3>
+                                <p class="mb-4">在模型训练方面，DeepSeek-R1-Zero 另辟蹊径。大多数开源模型通常会首先进行监督微调（SFT），然后再进入强化学习阶段。而 DeepSeek-R1-Zero 选择直接从纯强化学习开始训练。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <p class="mb-6">DeepSeek-R1 是 Zero 的更优版本，依然以强化学习为主，并增加了 SFT。它解决了 Zero 中遇到的几个问题：</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                        <div class="card p-6">
+                            <div class="flex items-center mb-3">
+                                <i class="fas fa-language text-xl mr-3" style="color: var(--accent-color);"></i>
+                                <h4 class="font-bold">语言混合问题</h4>
+                            </div>
+                            <p>纯强化学习容易导致生成内容的语言混合性问题，影响模型的表现。</p>
+                        </div>
+                        <div class="card p-6">
+                            <div class="flex items-center mb-3">
+                                <i class="fas fa-book-reader text-xl mr-3" style="color: var(--accent-color);"></i>
+                                <h4 class="font-bold">可读性问题</h4>
+                            </div>
+                            <p>直接强化学习可以增强模型的推理能力，从而改善生成文本的流畅度和一致性。</p>
+                        </div>
+                    </div>
+                    
+                    <p>因此，DeepSeek-R1 通过这种创新的训练流程，不仅突破了传统方法的局限，也大幅提升了推理任务的表现。</p>
+                </section>
+                
+                <!-- 分隔线 -->
+                <div class="section-divider"></div>
+                
+                <!-- 第二部分：GRPO 算法 -->
+                <section class="mb-16">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <i class="fas fa-cogs mr-3" style="color: var(--primary-color);"></i>
+                        DeepSeek-R1：何为"群体相对策略优化（GRPO）"？
+                    </h2>
+                    
+                    <p class="mb-8">DeepSeek-R1 的核心创新之一是其采用了群体相对策略优化（GRPO）算法，这一算法与传统的强化学习方法（如近端策略优化 PPO）大不相同。GRPO 的最大亮点在于其不需要额外的价值函数模型（Critic），而是直接通过计算群体奖励的相对优势来进行训练。</p>
+                    
+                    <!-- GRPO 与 PPO 对比图表 -->
+                    <div class="card p-6 mb-10">
+                        <h3 class="text-lg font-bold mb-4">GRPO vs PPO：算法对比</h3>
+                        <div class="mermaid">
+                            flowchart TD
+                                subgraph PPO["传统 PPO 方法"]
+                                    direction LR
+                                    A[输入状态] --> B[Actor 网络]
+                                    A --> C[Critic 网络]
+                                    B --> D[动作]
+                                    C --> E[状态价值估计]
+                                    D --> F[环境]
+                                    F --> G[奖励]
+                                    G --> H[优势计算]
+                                    E --> H
+                                    H --> I[策略更新]
+                                end
+                                
+                                subgraph GRPO["GRPO 方法"]
+                                    direction LR
+                                    J[输入状态] --> K[策略网络]
+                                    K --> L[动作]
+                                    L --> M[环境]
+                                    M --> N[奖励]
+                                    N --> O[群体统计]
+                                    O --> P[相对优势计算]
+                                    P --> Q[策略更新]
+                                end
+                                
+                                PPO --> GRPO
+                                
+                                %% 样式设置
+                                style A fill:#f9f9f9,stroke:#ccc
+                                style J fill:#f9f9f9,stroke:#ccc
+                                style C fill:#ffdddd,stroke:#f99
+                                style B fill:#ddffdd,stroke:#9d9
+                                style K fill:#ddffdd,stroke:#9d9
+                                style O fill:#ddddff,stroke:#99f
+                                
+                                
+                        </div>
+                    </div>
+                    
+                    <h3 class="text-xl font-bold mb-4">为什么 GRPO 能够提升模型性能？</h3>
+                    <p class="mb-6">通常，强化学习需要通过价值函数模型来估计状态的价值，这个过程计算开销较大，尤其在训练大型语言模型时显得尤为困难。然而，GRPO 摒弃了对价值函数的依赖，改用通过群体奖励的统计特性（如均值和标准差）来计算每个样本的相对优势值。这一创新不仅大幅度降低了计算成本，同时提升了训练效率。</p>
+                    
+                    <h3 class="text-xl font-bold mb-4">GRPO vs PPO：为什么选择 GRPO？</h3>
+                    <div class="highlight mb-8">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div>
+                                <div class="flex items-center mb-3">
+                                    <i class="fas fa-ban text-xl mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">不依赖价值函数</h4>
+                                </div>
+                                <p>PPO 需要训练一个价值函数模型（Critic）来估计状态的价值，而 GRPO 则完全摒弃了这一过程，直接通过群体奖励的统计特性来计算优势值。</p>
+                            </div>
+                            <div>
+                                <div class="flex items-center mb-3">
+                                    <i class="fas fa-tachometer-alt text-xl mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">训练效率提升</h4>
+                                </div>
+                                <p>传统的 PPO 训练需要同时进行策略模型（Actor）和价值函数模型（Critic）的优化，而 GRPO 只依赖于策略优化，大大简化了训练过程。</p>
+                            </div>
+                            <div>
+                                <div class="flex items-center mb-3">
+                                    <i class="fas fa-brain text-xl mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">推理性能提升</h4>
+                                </div>
+                                <p>通过更加高效的训练策略，GRPO 使得 DeepSeek-R1 在推理任务中的表现达到了与 OpenAI 的 o1-1217 相当的水平，且更加稳定和一致。</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 分隔线 -->
+                <div class="section-divider"></div>
+                
+                <!-- 第三部分：奖励规则 -->
+                <section class="mb-16">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <i class="fas fa-award mr-3" style="color: var(--primary-color);"></i>
+                        DeepSeek-R1 的强化学习奖励规则
+                    </h2>
+                    
+                    <p class="mb-8">在 DeepSeek-R1 的训练过程中，强化学习的奖励规则是非常关键的。模型通过奖励信号不断优化其生成的答案。具体来说，DeepSeek-R1 采用了两种主要的奖励机制：</p>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-10">
+                        <div class="card p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background-color: var(--primary-color); color: white;">
+                                    <i class="fas fa-check-circle text-2xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold">准确性奖励</h3>
+                            </div>
+                            <p class="mb-4"><strong>定义：</strong>该奖励机制用于评估模型生成的回答是否正确。例如，在涉及数学计算的问题中，模型需要在给定的格式内输出正确的答案。</p>
+                            <p><strong>应用：</strong>通过预定义的测试用例，编译器可以验证模型的回答是否正确，从而根据结果给予奖励。</p>
+                        </div>
+                        <div class="card p-6">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4" style="background-color: var(--accent-color); color: white;">
+                                    <i class="fas fa-code text-2xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold">格式奖励</h3>
+                            </div>
+                            <p class="mb-4"><strong>定义：</strong>格式奖励强制模型将其推理过程按照特定格式进行展示，从而确保推理过程的结构清晰。</p>
+                            <p><strong>应用：</strong>例如，模型需要在&lt;think&gt;和&lt;/think&gt;标签之间展示其推理过程，这不仅提升了可读性，还增加了答案的透明性。</p>
+                        </div>
+                    </div>
+                    
+                    <p class="mb-6">通过这两种奖励机制，DeepSeek-R1 能够在没有监督微调（SFT）的情况下，通过纯强化学习（RL）过程自我进化，展现出强大的推理能力。这种基于规则的奖励系统有效地引导了模型的学习方向，避免了复杂的神经奖励模型可能带来的奖励操控问题。</p>
+                    
+                    <!-- 奖励机制示例图 -->
+                    <div class="card p-6 mb-8">
+                        <h3 class="text-lg font-bold mb-4">奖励机制示例</h3>
+                        <div class="bg-gray-100 dark:bg-gray-800 p-4 rounded-lg font-mono text-sm overflow-auto">
+                            <p><span style="color: var(--primary-color);">问题：</span> <span class="dark:text-white text-black">计算 (3 * 4) + (7 * 2) 的结果。</span></p>
+                            <p class="mt-2"><span style="color: var(--accent-color);">模型回答：</span></p>
+                            <p class="mt-1 dark:text-white text-black">&lt;think&gt;</p>
+                            <p class="mt-1 dark:text-white text-black">我需要计算 (3 * 4) + (7 * 2) 的结果。</p>
+                            <p class="mt-1 dark:text-white text-black">首先计算 (3 * 4):</p>
+                            <p class="mt-1 dark:text-white text-black">3 * 4 = 12</p>
+                            <p class="mt-1 dark:text-white text-black">然后计算 (7 * 2):</p>
+                            <p class="mt-1 dark:text-white text-black">7 * 2 = 14</p>
+                            <p class="mt-1 dark:text-white text-black">最后将两个结果相加:</p>
+                            <p class="mt-1 dark:text-white text-black">12 + 14 = 26</p>
+                            <p class="mt-1 dark:text-white text-black">&lt;/think&gt;</p>
+                            <p class="mt-1 dark:text-white text-black">答案是 26。</p>
+                        </div>
+                    </div>
+                </section>
+                
+                <!-- 分隔线 -->
+                <div class="section-divider"></div>
+                
+                <!-- 第四部分：性能对比与未来展望 -->
+                <section class="mb-16">
+                    <h2 class="text-2xl font-bold mb-6 flex items-center">
+                        <i class="fas fa-chart-line mr-3" style="color: var(--primary-color);"></i>
+                        未来发展方向
+                    </h2>
+                    
+                    
+                    
+                    <p class="mb-6">DeepSeek-R1 的出现为大语言模型的训练方法带来了新的思路。未来，我们可以期待以下几个方向的发展：</p>
+                    
+                    <div class="card p-6 mb-8">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <div>
+                                <div class="flex items-center mb-3">
+                                    <i class="fas fa-rocket text-xl mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">训练方法的进一步优化</h4>
+                                </div>
+                                <p>GRPO 算法可能会被进一步改进，或者与其他强化学习方法结合，创造出更高效的训练范式。</p>
+                            </div>
+                            <div>
+                                <div class="flex items-center mb-3">
+                                    <i class="fas fa-project-diagram text-xl mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">多模态能力的扩展</h4>
+                                </div>
+                                <p>未来版本可能会整合图像、音频等多模态输入，扩展模型的应用场景。</p>
+                            </div>
+                            <div>
+                                <div class="flex items-center mb-3">
+                                    <i class="fas fa-shield-alt text-xl mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">安全性与对齐的增强</h4>
+                                </div>
+                                <p>通过更精细的奖励机制，进一步提高模型的安全性和与人类价值观的对齐程度。</p>
+                            </div>
+                            <div>
+                                <div class="flex items-center mb-3">
+                                    <i class="fas fa-microchip text-xl mr-2" style="color: var(--primary-color);"></i>
+                                    <h4 class="font-bold">计算效率的提升</h4>
+                                </div>
+                                <p>优化模型架构和推理过程，降低资源消耗，使其能够在更多设备上高效运行。</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="highlight p-6 mb-8">
+                        <h3 class="text-xl font-bold mb-4 flex items-center">
+                            <i class="fas fa-quote-left mr-3" style="color: var(--primary-color);"></i>
+                            结语
+                        </h3>
+                        <p class="mb-4">DeepSeek-R1 的出现代表了大语言模型训练方法的一次重要创新。通过群体相对策略优化（GRPO）算法和精心设计的奖励机制，它在推理能力上取得了显著突破。虽然仍有一些局限性，但其创新的训练方法为未来大语言模型的发展提供了新的思路和可能性。</p>
+                        <p>随着技术的不断进步，我们有理由相信，DeepSeek-R1 所开创的训练范式将继续演进，为人工智能领域带来更多令人兴奋的突破。</p>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+       <!-- 在文件末尾添加新的页脚 -->
+       <footer class="py-12" style="background-color: var(--bg-secondary);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold mb-4">关于我们</h3>
+                    <p class="text-sm" style="color: var(--text-secondary);">
+                        致力于分享AI与技术领域的前沿知识，让复杂的技术变得简单易懂。
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="index.html" class="hover:text-primary-color transition-all">首页</a></li>
+                        <li><a href="#" class="hover:text-primary-color transition-all">文章归档</a></li>
+                        <li><a href="#" class="hover:text-primary-color transition-all">关于我们</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">联系方式</h3>
+                    <div class="flex space-x-4">
+                        <a href="https://github.com/erberry" class="hover:text-primary-color transition-all">
+                            <i class="fab fa-github text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t text-center text-sm" style="border-color: var(--border-color);">
+                <p style="color: var(--text-secondary);">© 2023 知识分享平台 | AI技术解析</p>
+            </div>
+        </div>
+    </footer>
+    </div>
+
+    <script>
+        // 初始化Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+
+        // 深色/浅色模式切换
+        const toggleTheme = () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+
+            // 更新Mermaid图表主题
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: isDark ? 'dark' : 'default'
+            });
+
+            // 重新渲染所有图表
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const content = el.textContent;
+                el.textContent = '';
+                mermaid.render(`mermaid-${Math.random().toString(36).substr(2, 9)}`, content, (svg) => {
+                    el.innerHTML = svg;
+                });
+            });
+        };
+
+        // 检测系统主题
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // 监听系统主题变化
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (e.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            // 更新Mermaid图表主题
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: e.matches ? 'dark' : 'default'
+            });
+
+            // 重新渲染所有图表
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const content = el.textContent;
+                el.textContent = '';
+                mermaid.render(`mermaid-${Math.random().toString(36).substr(2, 9)}`, content, (svg) => {
+                    el.innerHTML = svg;
+                });
+            });
+        });
+
+        // 绑定主题切换按钮
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+        // 添加滚动动画
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.card');
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            cards.forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                observer.observe(card);
+            });
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // 内存条动画
+        setTimeout(() => {
+            document.querySelectorAll('.memory-segment').forEach(segment => {
+                const width = segment.style.width;
+                segment.style.width = '0';
+                setTimeout(() => {
+                    segment.style.width = width;
+                }, 100);
+            });
+        }, 500);
+    </script>
+</body>
+
+</html>

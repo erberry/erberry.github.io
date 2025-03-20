@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+     <!-- 添加 SEO 信息 -->
+     <meta name="description" content="深入解析大模型的显卡需求 - 为什么需要多张显卡？探索大模型背后的硬件需求与技术挑战">
+     <meta name="keywords" content="大模型,GPU,显卡,DeepSeek,并行计算,MoE,深度学习">
+     <title>大模型的显卡需求：为何一张不够？| 知识分享平台</title>
+    <link rel="stylesheet" href="https://cdn.staticfile.org/tailwindcss/2.2.19/tailwind.min.css">
+    <link rel="stylesheet" href="https://cdn.staticfile.org/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet"
+        href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;500;600;700&family=Noto+Sans+SC:wght@300;400;500;700&display=swap">
+    <script src="https://cdn.bootcdn.net/ajax/libs/mermaid/10.6.1/mermaid.min.js"></script>
+    <style>
+        :root {
+            --primary-color: #3b82f6;
+            --secondary-color: #10b981;
+            --accent-color: #8b5cf6;
+            --text-primary: #1f2937;
+            --text-secondary: #4b5563;
+            --bg-primary: #ffffff;
+            --bg-secondary: #f9fafb;
+            --bg-card: #ffffff;
+            --border-color: #e5e7eb;
+            --highlight-bg: #f3f4f6;
+        }
+
+        .dark {
+            --primary-color: #60a5fa;
+            --secondary-color: #34d399;
+            --accent-color: #a78bfa;
+            --text-primary: #f9fafb;
+            --text-secondary: #d1d5db;
+            --bg-primary: #111827;
+            --bg-secondary: #1f2937;
+            --bg-card: #1f2937;
+            --border-color: #374151;
+            --highlight-bg: #374151;
+        }
+
+        body {
+            font-family: 'Noto Sans SC', Tahoma, Arial, Roboto, "Droid Sans", "Helvetica Neue", "Droid Sans Fallback", "Heiti SC", "Hiragino Sans GB", Simsun, sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            transition: background-color 0.3s, color 0.3s;
+        }
+
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-family: 'Noto Serif SC', serif;
+            font-weight: 700;
+        }
+
+        .hero-title {
+            font-size: clamp(2rem, 5vw, 3.5rem);
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+
+        .hero-subtitle {
+            font-size: clamp(1.2rem, 3vw, 1.8rem);
+            line-height: 1.4;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            transition: transform 0.3s, box-shadow 0.3s;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
+        }
+
+        .highlight {
+            background-color: var(--highlight-bg);
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+        }
+
+        .first-letter::first-letter {
+            font-size: 3.5em;
+            float: left;
+            line-height: 0.8;
+            margin-right: 0.1em;
+            color: var(--primary-color);
+            font-weight: 700;
+        }
+
+        .gradient-text {
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+
+        .section-divider {
+            height: 4px;
+            background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+            border-radius: 2px;
+            margin: 2rem 0;
+        }
+
+        .memory-bar {
+            height: 2rem;
+            border-radius: 1rem;
+            overflow: hidden;
+            background-color: var(--highlight-bg);
+        }
+
+        .memory-segment {
+            height: 100%;
+            display: inline-block;
+            transition: width 1s ease-in-out;
+        }
+
+        .toggle-container {
+            width: 60px;
+            height: 30px;
+            border-radius: 15px;
+            background-color: var(--bg-secondary);
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .toggle-circle {
+            position: absolute;
+            top: 3px;
+            left: 3px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background-color: var(--bg-primary);
+            transition: transform 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-secondary);
+        }
+
+        .dark .toggle-circle {
+            transform: translateX(30px);
+        }
+
+        .mermaid {
+            background-color: var(--bg-card);
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin: 1.5rem 0;
+        }
+
+        @media (max-width: 640px) {
+            .memory-bar {
+                height: 1.5rem;
+            }
+        }
+        /* 导航栏样式 */
+        .navbar {
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+        }
+
+        .light-mode .navbar {
+            background-color: rgba(255, 255, 255, 0.8);
+        }
+
+        .dark-mode .navbar {
+            background-color: rgba(17, 24, 39, 0.8);
+        }
+
+        /* 主题切换按钮 */
+        .theme-toggle {
+            cursor: pointer;
+            transition: var(--transition-normal);
+        }
+
+        .theme-toggle:hover {
+            transform: rotate(30deg);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="min-h-screen flex flex-col">
+        <!-- 导航栏 -->
+        <nav class="navbar fixed top-0 left-0 right-0 z-50 py-4 px-6 flex justify-between items-center" style="background-color: var(--bg-primary);">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-book-open text-2xl" style="color: var(--primary-color);"></i>
+                <h1 class="text-xl font-bold serif">erberry的个人博客</h1>
+            </div>
+            <div class="flex items-center space-x-6">
+                <a href="index.html" class="hidden md:block hover:text-primary-color transition-all"><i class="fas fa-home mr-2"></i>首页</a>
+                <div class="toggle-container" id="theme-toggle">
+                    <div class="toggle-circle">
+                        <i class="fas fa-sun"></i>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Hero 区域 -->
+        <header class="relative overflow-hidden py-16 md:py-24" style="background-color: var(--bg-secondary);">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
+                    <div class="lg:col-span-3">
+                        <h1 class="hero-title mb-6 font-bold">
+                            <span class="gradient-text">为什么大模型需要多张显卡？</span>
+                        </h1>
+                        <p class="hero-subtitle mb-8" style="color: var(--text-secondary);">
+                            一张显卡真的不行吗？探索大模型背后的硬件需求与技术挑战
+                        </p>
+                        <div class="flex flex-wrap gap-4">
+                            <a href="#memory-requirements"
+                                class="px-6 py-3 rounded-full font-medium text-white transition-all"
+                                style="background-color: var(--primary-color);">
+                                <i class="fas fa-memory mr-2"></i>显存需求
+                            </a>
+                            <a href="#parallel-techniques" class="px-6 py-3 rounded-full font-medium transition-all"
+                                style="color: var(--primary-color); border: 2px solid var(--primary-color);">
+                                <i class="fas fa-network-wired mr-2"></i>并行技术
+                            </a>
+                        </div>
+                    </div>
+                    <div class="lg:col-span-2">
+                        <div class="card p-6 bg-opacity-90">
+                            <div class="text-center mb-4">
+                                <i class="fas fa-microchip text-5xl mb-4" style="color: var(--accent-color);"></i>
+                                <h3 class="text-xl font-bold mb-2">DeepSeek-V3 671B</h3>
+                                <p class="text-sm" style="color: var(--text-secondary);">6710亿参数的超大规模模型</p>
+                            </div>
+                            <div class="space-y-4">
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="font-medium">推理所需显存</span>
+                                        <span class="font-bold" style="color: var(--accent-color);">约630 GB</span>
+                                    </div>
+                                    <div class="memory-bar">
+                                        <div class="memory-segment"
+                                            style="background-color: var(--accent-color); width: 100%;"></div>
+                                    </div>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between mb-1">
+                                        <span class="font-medium">单张A100/H100显卡</span>
+                                        <span class="font-bold" style="color: var(--primary-color);">80 GB</span>
+                                    </div>
+                                    <div class="memory-bar">
+                                        <div class="memory-segment"
+                                            style="background-color: var(--primary-color); width: 12.7%;"></div>
+                                    </div>
+                                </div>
+                                <div class="text-center mt-6">
+                                    <span class="px-4 py-2 rounded-full text-sm font-bold"
+                                        style="background-color: var(--highlight-bg);">
+                                        <i class="fas fa-exclamation-circle mr-1"
+                                            style="color: var(--accent-color);"></i>
+                                        至少需要8张80GB显卡协同工作
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 装饰性背景元素 -->
+            <div class="absolute top-0 right-0 -mt-20 -mr-20 opacity-10">
+                <i class="fas fa-microchip text-9xl" style="color: var(--accent-color);"></i>
+            </div>
+            <div class="absolute bottom-0 left-0 -mb-16 -ml-16 opacity-10">
+                <i class="fas fa-server text-9xl" style="color: var(--primary-color);"></i>
+            </div>
+        </header>
+
+        <!-- 主要内容 -->
+        <main class="flex-grow">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+                <!-- 引言部分 -->
+                <section class="mb-16">
+                    <div class="card p-8">
+                        <p class="text-xl first-letter mb-6">
+                            我们经常听到训练大模型需要多少张显卡、推理需要多少张显卡。那么，一张显卡真的不行吗？答案是：对于超大规模模型来说，确实不行！这其中的主要原因在于，大模型"大"的本质——它对显存的需求非常庞大。
+                        </p>
+                        <p class="mb-6">
+                            以DeepSeek-V3
+                            671B为例，这是一个拥有6710亿参数的超大规模模型。其完整版本在推理时至少需要8张配备80GB显存的显卡（如A100或H100）。如果只有一张显卡，根本无法将整个模型加载到显存中运行。
+                        </p>
+                        <div class="highlight">
+                            <p class="flex items-start">
+                                <i class="fas fa-lightbulb mt-1 mr-3" style="color: var(--secondary-color);"></i>
+                                <span>
+                                    <strong>注意：</strong>对于有一些教程里说的24GB即可部署DeepSeek
+                                    671B，都是所谓的残血版本，实际是利用了DeepSeek的MoE技术，显存中只会放激活的专家，所以显存占用会显著降低，但推理速度也会显著变慢。
+                                </span>
+                            </p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 显存占用分析 -->
+                <section id="memory-requirements" class="mb-16">
+                    <h2 class="text-3xl font-bold mb-8">
+                        <i class="fas fa-memory mr-3" style="color: var(--primary-color);"></i>
+                        模型的显存占用分析
+                    </h2>
+
+                    <div class="card p-8 mb-8">
+                        <p class="mb-6">
+                            目前所有开源的大语言模型（LLM）都基于Transformer架构，并且采用了Decode-only的设计，即只使用了Transformer的解码器部分。以下是解码器的主要组成部分及其显存占用情况：
+                        </p>
+
+                        <!-- Transformer架构图 -->
+                        <div class="mb-8">
+                            <h3 class="text-xl font-bold mb-4">Transformer架构示意图</h3>
+                            <div class="mermaid">
+                                graph TD
+                                subgraph "Transformer解码器"
+                                A[输入Tokens] --> B[Embedding层]
+                                B --> C[Transformer层 x 61]
+                                C --> D[输出投影层]
+                                D --> E[输出Tokens]
+
+                                subgraph "单个Transformer层"
+                                F[多头注意力层\nMLA] --> G[归一化层]
+                                G --> H[前馈神经网络\nFFN/MoE]
+                                H --> I[归一化层]
+                                end
+                                end
+                            </div>
+                        </div>
+
+                        <!-- 显存占用详情 -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                            <div>
+                                <h3 class="text-xl font-bold mb-4">解码器的主要层结构</h3>
+                                <ul class="space-y-4">
+                                    <li class="flex">
+                                        <div class="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center mr-3"
+                                            style="background-color: var(--primary-color);">
+                                            <span class="text-white text-xs font-bold">1</span>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold">Embedding层</h4>
+                                            <p style="color: var(--text-secondary);">将输入的token转化为向量表示</p>
+                                            <p class="font-medium mt-1">显存占用：约<span
+                                                    style="color: var(--primary-color);">883.75 MB</span></p>
+                                        </div>
+                                    </li>
+                                    <li class="flex">
+                                        <div class="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center mr-3"
+                                            style="background-color: var(--primary-color);">
+                                            <span class="text-white text-xs font-bold">2</span>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold">Transformer核心层</h4>
+                                            <p style="color: var(--text-secondary);">在DeepSeek-V3 671B中，有61层</p>
+                                            <ul class="mt-2 space-y-2 pl-4">
+                                                <li>
+                                                    <span class="font-medium">MLA（多头注意力层）</span>：
+                                                    <p class="text-sm" style="color: var(--text-secondary);">
+                                                        负责捕捉输入序列中的全局依赖关系</p>
+                                                    <p class="text-sm">显存占用：每层约250.46 MB，61层总计约<span
+                                                            style="color: var(--primary-color);">14.91 GB</span></p>
+                                                </li>
+                                                <li>
+                                                    <span class="font-medium">归一化层与残差连接</span>：
+                                                    <p class="text-sm" style="color: var(--text-secondary);">
+                                                        对激活值进行归一化处理并加入残差连接</p>
+                                                    <p class="text-sm">显存占用：可以忽略不计</p>
+                                                </li>
+                                                <li>
+                                                    <span class="font-medium">FFN（前馈神经网络）</span>：
+                                                    <p class="text-sm" style="color: var(--text-secondary);">
+                                                        由普通MLP（多层感知机）和MoE（混合专家）结合实现</p>
+                                                    <p class="text-sm">显存占用：</p>
+                                                    <ul class="pl-4 text-sm">
+                                                        <li>前3层为普通MLP，每层约378 MB，总计<span
+                                                                style="color: var(--primary-color);">1.1 GB</span></li>
+                                                        <li>后58层为MoE，每层约10.54 GB，总计约<span
+                                                                style="color: var(--accent-color);">611.32 GB</span>
+                                                        </li>
+                                                    </ul>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </li>
+                                    <li class="flex">
+                                        <div class="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center mr-3"
+                                            style="background-color: var(--primary-color);">
+                                            <span class="text-white text-xs font-bold">3</span>
+                                        </div>
+                                        <div>
+                                            <h4 class="font-bold">输出投影层</h4>
+                                            <p style="color: var(--text-secondary);">将最终的隐藏状态映射回词汇表大小的输出空间</p>
+                                            <p class="font-medium mt-1">显存占用：约<span
+                                                    style="color: var(--primary-color);">883.75 MB</span></p>
+                                        </div>
+                                    </li>
+                                </ul>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold mb-4">显存占用分布</h3>
+                                <div class="card p-6">
+                                    <div class="mb-6">
+                                        <div class="flex justify-between mb-1">
+                                            <span>Embedding层</span>
+                                            <span>883.75 MB</span>
+                                        </div>
+                                        <div class="memory-bar">
+                                            <div class="memory-segment"
+                                                style="background-color: #4ade80; width: 0.14%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-6">
+                                        <div class="flex justify-between mb-1">
+                                            <span>MLA层 (61层)</span>
+                                            <span>14.91 GB</span>
+                                        </div>
+                                        <div class="memory-bar">
+                                            <div class="memory-segment"
+                                                style="background-color: #60a5fa; width: 2.37%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-6">
+                                        <div class="flex justify-between mb-1">
+                                            <span>普通MLP层 (3层)</span>
+                                            <span>1.1 GB</span>
+                                        </div>
+                                        <div class="memory-bar">
+                                            <div class="memory-segment"
+                                                style="background-color: #34d399; width: 0.17%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-6">
+                                        <div class="flex justify-between mb-1">
+                                            <span>MoE层 (58层)</span>
+                                            <span>611.32 GB</span>
+                                        </div>
+                                        <div class="memory-bar">
+                                            <div class="memory-segment"
+                                                style="background-color: #f87171; width: 97.04%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mb-6">
+                                        <div class="flex justify-between mb-1">
+                                            <span>输出投影层</span>
+                                            <span>883.75 MB</span>
+                                        </div>
+                                        <div class="memory-bar">
+                                            <div class="memory-segment"
+                                                style="background-color: #4ade80; width: 0.14%;"></div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-4 pt-4 border-t" style="border-color: var(--border-color);">
+                                        <div class="flex justify-between font-bold">
+                                            <span>总显存需求</span>
+                                            <span style="color: var(--accent-color);">约630 GB</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-6 text-center">
+                                    <div class="inline-block px-4 py-2 rounded-lg"
+                                        style="background-color: var(--highlight-bg);">
+                                        <p class="font-medium">
+                                            <i class="fas fa-exclamation-triangle mr-2"
+                                                style="color: var(--accent-color);"></i>
+                                            顶级显卡（A100/H100）单卡显存仅为80 GB
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 并行技术解决方案 -->
+                <section id="parallel-techniques" class="mb-16">
+                    <h2 class="text-3xl font-bold mb-8">
+                        <i class="fas fa-network-wired mr-3" style="color: var(--primary-color);"></i>
+                        如何用多张显卡解决问题？
+                    </h2>
+
+                    <p class="mb-8 text-lg">
+                        既然单张显卡无法加载完整的模型，那么如何利用多张显卡协同工作呢？以下是几种常见的分布式并行技术。
+                    </p>
+
+                    <!-- 修改这里：将flex布局改为grid布局，并设置为每行一个模块 -->
+                    <div class="grid grid-cols-1 gap-8 mb-12">
+                        <!-- 流水线并行 -->
+                        <div class="card p-6 flex flex-col h-full">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4"
+                                    style="background-color: var(--primary-color);">
+                                    <i class="fas fa-stream text-white text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold">流水线并行</h3>
+                            </div>
+                            <p class="mb-4 flex-grow">
+                                流水线并行的核心思想是将模型按层分割，分配到不同的设备上。例如，DeepSeek-V3的MoE层单层大小约为10.54 GB，而一张24 GB显存的显卡可以容纳两层MoE。
+                            </p>
+                            <div class="mermaid">
+                                graph LR
+                                A[GPU 1] --> B[GPU 2] --> C[GPU 3] --> D[GPU 4]
+                                A[GPU 1] -->|"层1-15"| A
+                                B[GPU 2] -->|"层16-30"| B
+                                C[GPU 3] -->|"层31-45"| C
+                                D[GPU 4] -->|"层46-61"| D
+                            </div>
+                            <div class="mt-4 pt-4 border-t" style="border-color: var(--border-color);">
+                                <h4 class="font-bold mb-2">优缺点</h4>
+                                <ul class="space-y-1 text-sm">
+                                    <li><i class="fas fa-plus-circle mr-1" style="color: var(--secondary-color);"></i>
+                                        实现简单直观</li>
+                                    <li><i class="fas fa-plus-circle mr-1" style="color: var(--secondary-color);"></i>
+                                        适合层数较多的模型</li>
+                                    <li><i class="fas fa-minus-circle mr-1" style="color: #f87171;"></i> GPU利用率不均衡</li>
+                                    <li><i class="fas fa-minus-circle mr-1" style="color: #f87171;"></i> 通信开销较大</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- 模型并行 -->
+                        <div class="card p-6 flex flex-col h-full">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4"
+                                    style="background-color: var(--primary-color);">
+                                    <i class="fas fa-puzzle-piece text-white text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold">模型并行</h3>
+                            </div>
+                            <p class="mb-4 flex-grow">
+                                模型并行的核心思想是将模型的不同部分分配到不同设备上，而不是像流水线并行那样按层划分。每个设备仅负责词汇表的一部分，显著减少单设备显存占用。
+                            </p>
+                            <div class="highlight text-sm mb-4">
+                                <pre><code>self.part_vocab_size = (vocab_size // world_size)
+self.vocab_start_idx = rank * self.part_vocab_size
+self.vocab_end_idx = self.vocab_start_idx + self.part_vocab_size
+self.weight = nn.Parameter(torch.empty(self.part_vocab_size, self.dim))</code></pre>
+                            </div>
+                            <div class="mermaid">
+                                graph TD
+                                A[完整模型] --> B[GPU 1: 词汇表部分1]
+                                A --> C[GPU 2: 词汇表部分2]
+                                A --> D[GPU 3: 词汇表部分3]
+                                A --> E[GPU 4: 词汇表部分4]
+                                B & C & D & E --> F[结果同步]
+                            </div>
+                            <div class="mt-4 pt-4 border-t" style="border-color: var(--border-color);">
+                                <h4 class="font-bold mb-2">优缺点</h4>
+                                <ul class="space-y-1 text-sm">
+                                    <li><i class="fas fa-plus-circle mr-1" style="color: var(--secondary-color);"></i>
+                                        显著减少单设备显存占用</li>
+                                    <li><i class="fas fa-plus-circle mr-1" style="color: var(--secondary-color);"></i>
+                                        适合大词汇表模型</li>
+                                    <li><i class="fas fa-minus-circle mr-1" style="color: #f87171;"></i> 需要频繁同步结果</li>
+                                </ul>
+                            </div>
+                        </div>
+
+                        <!-- 张量并行 -->
+                        <div class="card p-6 flex flex-col h-full">
+                            <div class="flex items-center mb-4">
+                                <div class="w-12 h-12 rounded-full flex items-center justify-center mr-4"
+                                    style="background-color: var(--primary-color);">
+                                    <i class="fas fa-th text-white text-xl"></i>
+                                </div>
+                                <h3 class="text-xl font-bold">张量并行</h3>
+                            </div>
+                            <p class="mb-4 flex-grow">
+                                张量并行进一步细分为列并行和行并行，旨在将单个张量的计算任务分配到多个设备上。这种方法能够有效地分解大型矩阵运算，提高计算效率。
+                            </p>
+
+                            <!-- 修改部分：添加更详细的行并行和列并行解释 -->
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div class="p-4 rounded-lg" style="background-color: var(--highlight-bg);">
+                                    <h4 class="font-bold mb-2">列并行 (Column Parallelism)</h4>
+                                    <p class="text-sm mb-2">将输出维度分片到不同设备，每个设备计算部分输出。</p>
+                                    <p class="text-sm mb-2">
+                                        <strong>示例：</strong>如果有8个GPU，原本形状为(7168×18432)的权重矩阵被分割为8个(7168×2304)的子矩阵。
+                                    </p>
+                                    <p class="text-sm">每个设备上的输入数据与本地子矩阵相乘，得到(batch_size×2304)的局部输出。</p>
+                                </div>
+                                <div class="p-4 rounded-lg" style="background-color: var(--highlight-bg);">
+                                    <h4 class="font-bold mb-2">行并行 (Row Parallelism)</h4>
+                                    <p class="text-sm mb-2">将输入维度分片到不同设备，通过all-reduce操作合并结果。</p>
+                                    <p class="text-sm mb-2"><strong>示例：</strong>如果有8个GPU，输入维度被分割为(input_dim÷8)大小的子矩阵。
+                                    </p>
+                                    <p class="text-sm">各设备计算完成后，通过all-reduce操作将局部结果汇总，得到完整输出。</p>
+                                </div>
+                            </div>
+
+                            <div class="highlight text-sm mb-4">
+                                <pre><code>class MLP(nn.Module):
+    def __init__(self, dim: int, inter_dim: int):
+        super().__init__()
+        self.w1 = ColumnParallelLinear(dim, inter_dim)  # 列并行
+        self.w2 = RowParallelLinear(inter_dim, dim)     # 行并行
+        self.w3 = ColumnParallelLinear(dim, inter_dim)  # 列并行
+        
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.w2(F.silu(self.w1(x)) * self.w3(x))</code></pre>
+                            </div>
+
+                            <!-- 添加具体实现代码 -->
+                            <div class="highlight text-sm mb-4">
+                                <pre><code># 列并行实现
+class ColumnParallelLinear(Linear):
+    def __init__(self, in_features: int, out_features: int, bias: bool = False, dtype=None):
+        self.part_out_features = out_features // world_size
+        super().__init__(in_features, self.part_out_features, bias, dtype)
+        
+# 行并行实现
+class RowParallelLinear(Linear):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        y = linear(x, self.weight)
+        if world_size > 1:
+            dist.all_reduce(y)  # 合并各设备结果
+        return y</code></pre>
+                            </div>
+
+                            <div class="mermaid">
+                                graph TD
+                                A[输入矩阵] --> B[列并行: 按列分割权重矩阵]
+                                B --> C[GPU 1: 计算部分1]
+                                B --> D[GPU 2: 计算部分2]
+                                C & D --> E[行并行: 结果合并]
+                                E --> F[输出矩阵]
+                            </div>
+                            <div class="mt-4 pt-4 border-t" style="border-color: var(--border-color);">
+                                <h4 class="font-bold mb-2">优缺点</h4>
+                                <ul class="space-y-1 text-sm">
+                                    <li><i class="fas fa-plus-circle mr-1" style="color: var(--secondary-color);"></i>
+                                        高效处理大型矩阵运算</li>
+                                    <li><i class="fas fa-plus-circle mr-1" style="color: var(--secondary-color);"></i>
+                                        计算负载均衡</li>
+                                    <li><i class="fas fa-minus-circle mr-1" style="color: #f87171;"></i> 实现复杂</li>
+                                    <li><i class="fas fa-minus-circle mr-1" style="color: #f87171;"></i> 需要精细的通信协调</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- MLP计算过程详解 -->
+                    <div class="card p-8 mb-12">
+                        <h3 class="text-2xl font-bold mb-6">MLP计算过程详解</h3>
+                        <p class="mb-6">
+                            MLP（多层感知机）是Transformer架构中的关键组件，也是显存占用的主要来源。以下是其计算过程的详细说明：
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-1 gap-8">
+                            <div>
+                                <h4 class="text-xl font-bold mb-4">计算步骤</h4>
+                                <ol class="space-y-4">
+                                    <li class="flex">
+                                        <div class="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center mr-3"
+                                            style="background-color: var(--primary-color);">
+                                            <span class="text-white text-xs font-bold">1</span>
+                                        </div>
+                                        <div>
+                                            <h5 class="font-bold">第一阶段：矩阵乘法</h5>
+                                            <p>输入 x 分别与权重矩阵 w1 和 w3 进行矩阵乘法运算，得到两个形状为 (batch_size×18432) 的中间结果。</p>
+                                        </div>
+                                    </li>
+                                    <li class="flex">
+                                        <div class="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center mr-3"
+                                            style="background-color: var(--primary-color);">
+                                            <span class="text-white text-xs font-bold">2</span>
+                                        </div>
+                                        <div>
+                                            <h5 class="font-bold">第二阶段：逐元素乘法</h5>
+                                            <p>将上述两个中间结果进行逐元素相乘（element-wise multiplication），生成一个新的形状为
+                                                (batch_size×18432) 的输出。</p>
+                                        </div>
+                                    </li>
+                                    <li class="flex">
+                                        <div class="flex-shrink-0 h-6 w-6 rounded-full flex items-center justify-center mr-3"
+                                            style="background-color: var(--primary-color);">
+                                            <span class="text-white text-xs font-bold">3</span>
+                                        </div>
+                                        <div>
+                                            <h5 class="font-bold">第三阶段：最终矩阵乘法</h5>
+                                            <p>将上一步的结果与权重矩阵 w2 再次进行矩阵乘法运算，最终得到一个形状为 (batch_size×7168) 的输出。</p>
+                                        </div>
+                                    </li>
+                                </ol>
+                            </div>
+                            <div>
+                                <h5 class="font-bold mt-6 mb-3">单GPU计算流程</h5>
+                                <div class="mermaid">
+                                    graph TD
+                                    A[输入 x: batch_size×7168] --> B[w1: 7168×18432]
+                                    A --> C[w3: 7168×18432]
+                                    B --> D[中间结果1: batch_size×18432]
+                                    C --> E[中间结果2: batch_size×18432]
+                                    D --> F{逐元素乘法}
+                                    E --> F
+                                    F --> G[中间结果3: batch_size×18432]
+                                    G --> H[w2: 18432×7168]
+                                    H --> I[输出: batch_size×7168]
+                                </div>
+
+                                <!-- 新增多GPU并行计算流程图 -->
+                                <h5 class="font-bold mt-6 mb-3">多GPU并行计算流程</h5>
+                                <div class="mermaid">
+                                    graph TD
+                                    subgraph "GPU 1"
+                                    A1[输入 x: batch_size×7168] --> B1[w1部分1: 7168×9216]
+                                    A1 --> C1[w3部分1: 7168×9216]
+                                    B1 --> D1[中间结果1部分: batch_size×9216]
+                                    C1 --> E1[中间结果2部分: batch_size×9216]
+                                    D1 --> F1{逐元素乘法}
+                                    E1 --> F1
+                                    F1 --> G1[中间结果3部分: batch_size×9216]
+                                    end
+
+                                    subgraph "GPU 2"
+                                    A2[输入 x: batch_size×7168] --> B2[w1部分2: 7168×9216]
+                                    A2 --> C2[w3部分2: 7168×9216]
+                                    B2 --> D2[中间结果1部分: batch_size×9216]
+                                    C2 --> E2[中间结果2部分: batch_size×9216]
+                                    D2 --> F2{逐元素乘法}
+                                    E2 --> F2
+                                    F2 --> G2[中间结果3部分: batch_size×9216]
+                                    end
+
+                                    G1 --> H1[w2部分1: 9216×7168]
+                                    G2 --> H2[w2部分2: 9216×7168]
+
+                                    H1 --> I1[输出部分1: batch_size×7168]
+                                    H2 --> I2[输出部分2: batch_size×7168]
+
+                                    I1 & I2 --> J[All-Reduce合并]
+                                    J --> K[最终输出: batch_size×7168]
+                                </div>
+
+                                <div class="mt-6 p-4 rounded-lg" style="background-color: var(--highlight-bg);">
+                                    <h5 class="font-bold mb-2">张量并行如何优化</h5>
+                                    <p class="text-sm mb-2">
+                                        <i class="fas fa-arrow-right mr-2" style="color: var(--secondary-color);"></i>
+                                        <strong>列并行</strong>：将 w1 和 w3 按列分割到不同GPU上，各自计算部分结果
+                                    </p>
+                                    <p class="text-sm mb-2">
+                                        <i class="fas fa-arrow-right mr-2" style="color: var(--secondary-color);"></i>
+                                        <strong>行并行</strong>：将 w2 按行分割到不同GPU上，各自计算部分最终输出
+                                    </p>
+                                    <p class="text-sm">
+                                        <i class="fas fa-arrow-right mr-2" style="color: var(--secondary-color);"></i>
+                                        通过 all-reduce 操作合并各GPU的计算结果
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- MoE技术解析 -->
+                <section class="mb-16">
+                    <h2 class="text-3xl font-bold mb-8">
+                        <i class="fas fa-brain mr-3" style="color: var(--primary-color);"></i>
+                        MoE技术：显存与性能的平衡
+                    </h2>
+
+                    <div class="card p-8">
+                        <p class="mb-6">
+                            混合专家模型（Mixture of Experts，MoE）是一种特殊的神经网络架构，它通过"专家"机制大幅提升模型容量，同时保持计算效率。DeepSeek-V3
+                            671B模型中的MoE层是显存占用的主要来源。
+                        </p>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                            <div>
+                                <h3 class="text-xl font-bold mb-4">MoE的工作原理</h3>
+                                <p class="mb-4">
+                                    MoE层包含多个"专家"（Expert）网络，每个专家都是一个完整的神经网络。但在推理过程中，只有部分专家会被激活，这就是所谓的"稀疏激活"机制。
+                                </p>
+                                <div class="mermaid">
+                                    graph TD
+                                    A[输入] --> B[路由器]
+                                    B --> C[专家1]
+                                    B --> D[专家2]
+                                    B --> E[专家3]
+                                    B --> F[专家4]
+                                    B --> G[...]
+                                    B --> H[专家N]
+                                    C & D & E & F & G & H --> I[输出]
+                                </div>
+                            </div>
+                            <div>
+                                <h3 class="text-xl font-bold mb-4">MoE与显存优化</h3>
+                                <ul class="space-y-3">
+                                    <li class="flex">
+                                        <i class="fas fa-check-circle mt-1 mr-3"
+                                            style="color: var(--secondary-color);"></i>
+                                        <div>
+                                            <strong>稀疏激活</strong>：每次推理只激活部分专家，而非全部专家
+                                        </div>
+                                    </li>
+                                    <li class="flex">
+                                        <i class="fas fa-check-circle mt-1 mr-3"
+                                            style="color: var(--secondary-color);"></i>
+                                        <div>
+                                            <strong>显存优化</strong>：可以只将激活的专家加载到显存中，大幅降低显存需求
+                                        </div>
+                                    </li>
+                                    <li class="flex">
+                                        <i class="fas fa-check-circle mt-1 mr-3"
+                                            style="color: var(--secondary-color);"></i>
+                                        <div>
+                                            <strong>性能权衡</strong>：虽然显存占用降低，但需要频繁加载不同专家，导致推理速度变慢
+                                        </div>
+                                    </li>
+                                    <li class="flex">
+                                        <i class="fas fa-check-circle mt-1 mr-3"
+                                            style="color: var(--secondary-color);"></i>
+                                        <div>
+                                            <strong>"残血版"原理</strong>：24GB显卡可以运行DeepSeek 671B的原因就是利用了这种机制，但推理速度会显著降低
+                                        </div>
+                                    </li>
+                                </ul>
+                                <div class="mt-6 p-4 rounded-lg" style="background-color: var(--highlight-bg);">
+                                    <p class="text-sm">
+                                        <i class="fas fa-lightbulb mr-2" style="color: var(--accent-color);"></i>
+                                        <strong>专家知识</strong>：DeepSeek-V3
+                                        671B模型中的MoE层包含8个专家，但每次只激活1-2个专家进行计算，这使得模型在保持巨大参数量的同时，实际计算量可以控制在合理范围内。
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 总结与延伸阅读 -->
+                <section>
+                    <h2 class="text-3xl font-bold mb-8">
+                        <i class="fas fa-book-open mr-3" style="color: var(--primary-color);"></i>
+                        总结与延伸阅读
+                    </h2>
+
+                    <div class="card p-8 mb-8">
+                        <h3 class="text-xl font-bold mb-4">关键结论</h3>
+                        <ul class="space-y-3">
+                            <li class="flex">
+                                <i class="fas fa-circle mt-1.5 mr-3 text-xs" style="color: var(--primary-color);"></i>
+                                <div>
+                                    <strong>大模型需要多张显卡的根本原因是显存需求</strong>：以DeepSeek-V3 671B为例，完整模型需要约630GB显存，远超单卡能力
+                                </div>
+                            </li>
+                            <li class="flex">
+                                <i class="fas fa-circle mt-1.5 mr-3 text-xs" style="color: var(--primary-color);"></i>
+                                <div>
+                                    <strong>MoE层是显存占用的主要来源</strong>：在DeepSeek-V3中，MoE层占用了超过97%的显存
+                                </div>
+                            </li>
+                            <li class="flex">
+                                <i class="fas fa-circle mt-1.5 mr-3 text-xs" style="color: var(--primary-color);"></i>
+                                <div>
+                                    <strong>多种并行技术协同工作</strong>：流水线并行、模型并行和张量并行各有优缺点，实际应用中常常结合使用
+                                </div>
+                            </li>
+                            <li class="flex">
+                                <i class="fas fa-circle mt-1.5 mr-3 text-xs" style="color: var(--primary-color);"></i>
+                                <div>
+                                    <strong>MoE技术提供了显存与性能的平衡点</strong>：通过稀疏激活机制，可以在有限显存下运行超大模型，但会牺牲推理速度
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    
+                </section>
+            </div>
+        </main>
+
+       <!-- 在文件末尾添加新的页脚 -->
+       <footer class="py-12" style="background-color: var(--bg-secondary);">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <div>
+                    <h3 class="text-lg font-bold mb-4">关于我们</h3>
+                    <p class="text-sm" style="color: var(--text-secondary);">
+                        致力于分享AI与技术领域的前沿知识，让复杂的技术变得简单易懂。
+                    </p>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">快速链接</h3>
+                    <ul class="space-y-2 text-sm">
+                        <li><a href="index.html" class="hover:text-primary-color transition-all">首页</a></li>
+                        <li><a href="#" class="hover:text-primary-color transition-all">文章归档</a></li>
+                        <li><a href="#" class="hover:text-primary-color transition-all">关于我们</a></li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="text-lg font-bold mb-4">联系方式</h3>
+                    <div class="flex space-x-4">
+                        <a href="https://github.com/erberry" class="hover:text-primary-color transition-all">
+                            <i class="fab fa-github text-xl"></i>
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-8 pt-8 border-t text-center text-sm" style="border-color: var(--border-color);">
+                <p style="color: var(--text-secondary);">© 2023 知识分享平台 | AI技术解析</p>
+            </div>
+        </div>
+    </footer>
+    </div>
+
+    <script>
+        // 初始化Mermaid
+        mermaid.initialize({
+            startOnLoad: true,
+            theme: window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'default',
+            flowchart: {
+                useMaxWidth: true,
+                htmlLabels: true,
+                curve: 'basis'
+            }
+        });
+
+        // 深色/浅色模式切换
+        const toggleTheme = () => {
+            const isDark = document.documentElement.classList.toggle('dark');
+
+            // 更新Mermaid图表主题
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: isDark ? 'dark' : 'default'
+            });
+
+            // 重新渲染所有图表
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const content = el.textContent;
+                el.textContent = '';
+                mermaid.render(`mermaid-${Math.random().toString(36).substr(2, 9)}`, content, (svg) => {
+                    el.innerHTML = svg;
+                });
+            });
+        };
+
+        // 检测系统主题
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            document.documentElement.classList.add('dark');
+        }
+
+        // 监听系统主题变化
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {
+            if (e.matches) {
+                document.documentElement.classList.add('dark');
+            } else {
+                document.documentElement.classList.remove('dark');
+            }
+
+            // 更新Mermaid图表主题
+            mermaid.initialize({
+                startOnLoad: false,
+                theme: e.matches ? 'dark' : 'default'
+            });
+
+            // 重新渲染所有图表
+            document.querySelectorAll('.mermaid').forEach(el => {
+                const content = el.textContent;
+                el.textContent = '';
+                mermaid.render(`mermaid-${Math.random().toString(36).substr(2, 9)}`, content, (svg) => {
+                    el.innerHTML = svg;
+                });
+            });
+        });
+
+        // 绑定主题切换按钮
+        document.getElementById('theme-toggle').addEventListener('click', toggleTheme);
+
+        // 添加滚动动画
+        document.addEventListener('DOMContentLoaded', () => {
+            const cards = document.querySelectorAll('.card');
+            const observer = new IntersectionObserver(entries => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        entry.target.style.opacity = '1';
+                        entry.target.style.transform = 'translateY(0)';
+                    }
+                });
+            }, { threshold: 0.1 });
+
+            cards.forEach(card => {
+                card.style.opacity = '0';
+                card.style.transform = 'translateY(20px)';
+                card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                observer.observe(card);
+            });
+        });
+
+        // 平滑滚动
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function (e) {
+                e.preventDefault();
+                document.querySelector(this.getAttribute('href')).scrollIntoView({
+                    behavior: 'smooth'
+                });
+            });
+        });
+
+        // 内存条动画
+        setTimeout(() => {
+            document.querySelectorAll('.memory-segment').forEach(segment => {
+                const width = segment.style.width;
+                segment.style.width = '0';
+                setTimeout(() => {
+                    segment.style.width = width;
+                }, 100);
+            });
+        }, 500);
+    </script>
+</body>
+
+</html>
